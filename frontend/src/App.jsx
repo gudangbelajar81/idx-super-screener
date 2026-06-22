@@ -322,6 +322,18 @@ function App() {
     else if (activeTab === 'global') fetchGlobal();
   };
 
+  // Sinkronisasi otomatis Sinyal VIP ke Command Center
+  useEffect(() => {
+    const elite = [];
+    swingData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Benteng'}));
+    kavaleriData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Kavaleri'}));
+    ninjaData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Ninja'}));
+    whaleData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Radar Paus'}));
+    globalData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Global Astro'}));
+    
+    setCompositeData(elite);
+  }, [swingData, kavaleriData, ninjaData, whaleData, globalData]);
+
   const currentData = activeTab === 'swing' ? swingData : activeTab === 'ninja' ? ninjaData : activeTab === 'kavaleri' ? kavaleriData : whaleData;
   const totalScanned = currentData.length;
   const totalSignals = currentData.filter(d => d.signal).length;

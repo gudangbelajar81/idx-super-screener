@@ -82,6 +82,8 @@ def build_universe():
             else:
                 if avg_volatility > VOLATILITY_THRESHOLD:
                     category = "NINJA"
+                elif avg_value >= 15_000_000_000:
+                    category = "KAVALERI"
                 else:
                     category = "SWING"
                     

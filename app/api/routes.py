@@ -169,12 +169,38 @@ def get_ipo_radar():
     ipo_news = get_ipo_news()
     return {"data": ipo_news}
 
+@router.get("/api/candidates/{mode}")
+def get_candidates(mode: str):
+    category_map = {"swing": "SWING", "kavaleri": "KAVALERI", "ninja": "NINJA"}
+    category = category_map.get(mode.lower(), "SWING")
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            order_by = "avg_value DESC" if category != "NINJA" else "volatility DESC"
+            cursor.execute(f"SELECT ticker, avg_value FROM idx_universe WHERE category=%s ORDER BY {order_by} LIMIT 50", (category,))
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                results.append({
+                    "ticker": row['ticker'].replace('.JK', ''),
+                    "price": 0,
+                    "liquidity": float(row['avg_value']),
+                    "signal": False,
+                    "status": "KANDIDAT MENTAH",
+                    "reason": "Menunggu Pemindaian VIP"
+                })
+            return {"data": results}
+    finally:
+        conn.close()
+
 @router.get("/api/scan/swing")
 def scan_swing(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM watchlists WHERE mode='swing'")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='SWING' ORDER BY avg_value DESC LIMIT 50")
             swing_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()
@@ -249,7 +275,7 @@ def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM watchlists WHERE mode='kavaleri'")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='KAVALERI' ORDER BY avg_value DESC LIMIT 50")
             tickers = [row["ticker"] for row in cursor.fetchall()]
     finally:
         conn.close()
@@ -311,7 +337,7 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM watchlists WHERE mode='scalp'")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='NINJA' ORDER BY volatility DESC LIMIT 50")
             scalp_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()

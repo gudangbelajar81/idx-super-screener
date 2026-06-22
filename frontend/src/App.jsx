@@ -146,6 +146,19 @@ function App() {
     setLoading(false);
   };
 
+  const fetchCandidates = async (mode) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/candidates/${mode}`);
+      if (mode === 'swing') setSwingData(res.data.data);
+      else if (mode === 'kavaleri') setKavaleriData(res.data.data);
+      else if (mode === 'ninja') setNinjaData(res.data.data);
+    } catch (err) {
+      console.error('Fetch candidates error:', err);
+    }
+    setLoading(false);
+  };
+
   const runSensus = async () => {
     if (!window.confirm("Menjalankan Sensus akan mereset daftar pantauan (Watchlist) Mode Benteng Anda dan menggantinya dengan saham super terpilih. Lanjutkan?")) return;
     setSensusLoading(true);
@@ -264,8 +277,10 @@ function App() {
       fetchWatchlist();
     } else if (activeTab === 'portfolio') {
       fetchPortfolio();
+    } else if (['swing', 'kavaleri', 'ninja'].includes(activeTab)) {
+      fetchCandidates(activeTab);
     }
-    // Fetch IPO news only once when first loading (or can be done unconditionally)
+    // Fetch IPO news only once when first loading
     if (ipoNews.length === 0) {
       fetchIpoNews();
     }

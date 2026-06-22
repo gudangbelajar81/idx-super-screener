@@ -65,24 +65,39 @@ function App() {
     setCompositeLoading(false);
   };
 
-  const fetchSwing = async () => {
+  const fetchSwing = async (forcePremium = isPremium) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/swing?premium=${isPremium}`);
+      const res = await axios.get(`${API_BASE}/api/scan/swing?premium=${forcePremium}`);
       setSwingData(res.data.data);
     } catch (err) {
-      console.error(err);
+      // Jika premium gagal, fallback ke yahoo finance
+      if (forcePremium) {
+        console.warn('GoAPI error, fallback ke Yahoo Finance...');
+        try {
+          const res2 = await axios.get(`${API_BASE}/api/scan/swing?premium=false`);
+          setSwingData(res2.data.data);
+          setIsPremium(false);
+        } catch (err2) { console.error(err2); }
+      } else { console.error(err); }
     }
     setLoading(false);
   };
 
-  const fetchKavaleri = async () => {
+  const fetchKavaleri = async (forcePremium = isPremium) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${isPremium}`);
+      const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${forcePremium}`);
       setKavaleriData(res.data.data);
     } catch (err) {
-      console.error(err);
+      if (forcePremium) {
+        console.warn('GoAPI error, fallback ke Yahoo Finance...');
+        try {
+          const res2 = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=false`);
+          setKavaleriData(res2.data.data);
+          setIsPremium(false);
+        } catch (err2) { console.error(err2); }
+      } else { console.error(err); }
     }
     setLoading(false);
   };
@@ -112,13 +127,20 @@ function App() {
     setLoading(false);
   };
 
-  const fetchNinja = async () => {
+  const fetchNinja = async (forcePremium = isPremium) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/ninja?premium=${isPremium}`);
+      const res = await axios.get(`${API_BASE}/api/scan/ninja?premium=${forcePremium}`);
       setNinjaData(res.data.data);
     } catch (err) {
-      console.error(err);
+      if (forcePremium) {
+        console.warn('GoAPI error, fallback ke Yahoo Finance...');
+        try {
+          const res2 = await axios.get(`${API_BASE}/api/scan/ninja?premium=false`);
+          setNinjaData(res2.data.data);
+          setIsPremium(false);
+        } catch (err2) { console.error(err2); }
+      } else { console.error(err); }
     }
     setLoading(false);
   };
@@ -315,9 +337,11 @@ function App() {
   };
 
   const handleScan = () => {
-    if (activeTab === 'swing') fetchSwing();
-    else if (activeTab === 'ninja') fetchNinja();
-    else if (activeTab === 'kavaleri') fetchKavaleri();
+    // Auto-aktifkan Premium saat VIP Scan ditekan
+    setIsPremium(true);
+    if (activeTab === 'swing') fetchSwing(true);
+    else if (activeTab === 'ninja') fetchNinja(true);
+    else if (activeTab === 'kavaleri') fetchKavaleri(true);
     else if (activeTab === 'whale') fetchWhale();
     else if (activeTab === 'global') fetchGlobal();
   };

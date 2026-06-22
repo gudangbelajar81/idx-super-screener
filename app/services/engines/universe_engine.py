@@ -11,6 +11,23 @@ from app.core.idx_tickers import get_all_idx_tickers
 VOLATILITY_THRESHOLD = 0.04
 
 from urllib.parse import urlparse
+import json
+import time
+
+STATUS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "sensus_status.json")
+
+def set_status(status, progress, message, total_scanned=0, total_found=0):
+    try:
+        with open(STATUS_FILE, "w") as f:
+            json.dump({
+                "status": status,
+                "progress": progress,
+                "message": message,
+                "total_scanned": total_scanned,
+                "total_found": total_found
+            }, f)
+    except Exception as e:
+        print(f"Gagal menulis status: {e}")
 
 def get_db_connection():
     db_url = os.environ.get("MYSQL_URL")
@@ -36,64 +53,73 @@ def get_db_connection():
 
 def build_universe():
     """
-    Menjalankan sensus saham:
-    1. Mengunduh data 1 bulan terakhir untuk 400+ saham secara serentak (batch).
-    2. Menghitung likuiditas (Average Daily Value).
-    3. Menghitung volatilitas (Average Daily Range).
-    4. Menyimpan kategorinya ke database.
+    Menjalankan sensus saham secara Background Task:
+    - Batching per 50 saham.
+    - Menyimpan status ke sensus_status.json.
     """
     tickers = get_all_idx_tickers()
+    total_tickers = len(tickers)
+    print(f"[Universe Builder] Memulai sensus untuk {total_tickers} saham...")
     
-    # Download batch (sangat cepat karena multi-threading)
-    print(f"[Universe Builder] Memulai sensus untuk {len(tickers)} saham...")
-    
-    # Kita bagi jadi beberapa batch jika terlalu banyak (tapi yfinance biasanya handle 400 dgn baik)
-    # yfinance.download otomatis mereturn DataFrame dengan multi-index columns jika banyak ticker
-    data = yf.download(tickers, period="1mo", threads=True, progress=False)
+    set_status("running", 0, f"Memulai sensus {total_tickers} saham...")
     
     results = []
+    chunk_size = 50
     
-    for ticker in tickers:
+    for i in range(0, total_tickers, chunk_size):
+        chunk = tickers[i:i + chunk_size]
+        batch_num = (i // chunk_size) + 1
+        total_batches = (total_tickers // chunk_size) + 1
+        
+        set_status("running", int((i / total_tickers) * 100), f"Memproses batch {batch_num}/{total_batches} ({len(chunk)} saham)")
+        print(f"[Universe Builder] Mendownload batch {batch_num}/{total_batches}...")
+        
         try:
-            # Ambil data spesifik per ticker
-            # yf.download dengan banyak ticker mengembalikan kolom multi-level: (PriceType, Ticker)
-            df = pd.DataFrame({
-                'Close': data['Close'][ticker],
-                'Volume': data['Volume'][ticker],
-                'High': data['High'][ticker],
-                'Low': data['Low'][ticker]
-            }).dropna()
+            data = yf.download(chunk, period="1mo", threads=True, progress=False)
+            time.sleep(1) # Jeda menghindari rate limit
             
-            if df.empty or len(df) < 10:
-                results.append((ticker, "SAMPAH", 0, 0))
-                continue
-                
-            # Hitung Likuiditas (Avg Value 20 hari terakhir)
-            df['Value'] = df['Close'] * df['Volume']
-            avg_value = df['Value'].tail(20).mean()
-            
-            # Hitung Volatilitas (Rata-rata jarak High ke Low dalam %)
-            df['Range'] = (df['High'] - df['Low']) / df['Low']
-            avg_volatility = df['Range'].tail(20).mean()
-            
-            # Klasifikasi
-            if avg_value < MIN_DAILY_VOLUME:
-                category = "SAMPAH"
-            else:
-                if avg_volatility > VOLATILITY_THRESHOLD:
-                    category = "NINJA"
-                elif avg_value >= 15_000_000_000:
-                    category = "KAVALERI"
-                else:
-                    category = "SWING"
+            for ticker in chunk:
+                try:
+                    if len(chunk) == 1:
+                        df = data.dropna()
+                    else:
+                        df = pd.DataFrame({
+                            'Close': data['Close'][ticker],
+                            'Volume': data['Volume'][ticker],
+                            'High': data['High'][ticker],
+                            'Low': data['Low'][ticker]
+                        }).dropna()
                     
-            results.append((ticker, category, float(avg_value), float(avg_volatility)))
-            
+                    if df.empty or len(df) < 10:
+                        results.append((ticker, "SAMPAH", 0, 0))
+                        continue
+                        
+                    df['Value'] = df['Close'] * df['Volume']
+                    avg_value = df['Value'].tail(20).mean()
+                    
+                    df['Range'] = (df['High'] - df['Low']) / df['Low']
+                    avg_volatility = df['Range'].tail(20).mean()
+                    
+                    if avg_value < MIN_DAILY_VOLUME:
+                        category = "SAMPAH"
+                    else:
+                        if avg_volatility > VOLATILITY_THRESHOLD:
+                            category = "NINJA"
+                        elif avg_value >= 15_000_000_000:
+                            category = "KAVALERI"
+                        else:
+                            category = "SWING"
+                            
+                    results.append((ticker, category, float(avg_value), float(avg_volatility)))
+                except Exception:
+                    results.append((ticker, "SAMPAH", 0, 0))
         except Exception as e:
-            # Jika error (saham baru IPO, disuspend lama, dsb)
-            results.append((ticker, "SAMPAH", 0, 0))
+            print(f"[Universe Builder] Batch {batch_num} gagal didownload: {e}")
+            for ticker in chunk:
+                results.append((ticker, "SAMPAH", 0, 0))
 
     # Simpan ke Database
+    set_status("running", 95, "Menyimpan hasil ke database...")
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -105,6 +131,10 @@ def build_universe():
             cursor.executemany(sql, results)
         conn.commit()
         print(f"[Universe Builder] Sensus Selesai! {len(results)} saham diklasifikasikan.")
+        set_status("done", 100, "Sensus selesai!", total_tickers, len([r for r in results if r[1] != 'SAMPAH']))
+    except Exception as e:
+        print(f"[Universe Builder] Database Error: {e}")
+        set_status("error", 0, f"Error Database: {e}")
     finally:
         conn.close()
         

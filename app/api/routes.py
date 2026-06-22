@@ -1,11 +1,12 @@
 from app.core.database import get_db_connection
 import pymysql
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import concurrent.futures
 import os
+import json
 from urllib.parse import urlparse
 from dbutils.pooled_db import PooledDB
 from cachetools import cached, TTLCache
@@ -621,10 +622,28 @@ def get_portfolio():
     return {"data": data}
 
 @router.post("/api/universe/build")
-def build_idx_universe():
-    """Endpoint untuk menjalankan sensus seluruh saham IDX"""
-    result = build_universe()
-    return result
+def build_idx_universe(background_tasks: BackgroundTasks):
+    """Endpoint untuk memulai sensus seluruh saham IDX di belakang layar"""
+    from app.services.engines.universe_engine import set_status
+    # Reset status sebelum mulai
+    set_status("starting", 0, "Mempersiapkan Sensus...")
+    background_tasks.add_task(build_universe)
+    return {"message": "Sensus Master dimulai di belakang layar.", "status": "processing"}
+
+@router.get("/api/universe/status")
+def get_sensus_status():
+    """Mengambil status progres sensus dari sensus_status.json"""
+    import os
+    import json
+    STATUS_FILE = os.path.join(os.path.dirname(__file__), "..", "sensus_status.json")
+    if not os.path.exists(STATUS_FILE):
+        return {"status": "idle", "progress": 0, "message": "Belum ada sensus yang berjalan"}
+    try:
+        with open(STATUS_FILE, "r") as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        return {"status": "error", "progress": 0, "message": f"Gagal membaca status: {e}"}
 
 swing_cache = TTLCache(maxsize=100, ttl=60)
 

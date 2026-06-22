@@ -317,18 +317,41 @@ function App() {
   };
 
   const buildUniverse = async () => {
-    if (!window.confirm("Proses Sensus Saham membutuhkan waktu 1-2 menit. Lanjutkan?")) return;
+    if (!window.confirm("Proses Sensus Saham membutuhkan waktu sekitar 1-2 menit. Jalankan di latar belakang?")) return;
     setBuildingUniverse(true);
     startEngineTracking('sensus');
     try {
-      const res = await axios.post(`${API_BASE}/api/universe/build`);
-      stopEngineTracking(true, `Sensus selesai! ${res.data.total} saham berhasil diklasifikasikan.`);
-      await fetchCandidates(activeTab);
+      // Trigger background task
+      await axios.post(`${API_BASE}/api/universe/build`);
+      
+      // Start polling
+      const pollInterval = setInterval(async () => {
+        try {
+          const res = await axios.get(`${API_BASE}/api/universe/status`);
+          const statusData = res.data;
+          
+          if (statusData.status === 'running' || statusData.status === 'starting') {
+            setEngineMsg(`${statusData.progress}% - ${statusData.message}`);
+          } else if (statusData.status === 'done') {
+            clearInterval(pollInterval);
+            stopEngineTracking(true, `Sensus selesai! ${statusData.total_found} saham berhasil diklasifikasikan.`);
+            setBuildingUniverse(false);
+            fetchCandidates(activeTab);
+          } else if (statusData.status === 'error') {
+            clearInterval(pollInterval);
+            stopEngineTracking(false, `Sensus gagal: ${statusData.message}`);
+            setBuildingUniverse(false);
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 2000);
+      
     } catch (err) {
       console.error(err);
-      stopEngineTracking(false, 'Sensus gagal — cek koneksi server.');
+      stopEngineTracking(false, 'Gagal memulai sensus — cek koneksi server.');
+      setBuildingUniverse(false);
     }
-    setBuildingUniverse(false);
   };
 
   useEffect(() => {

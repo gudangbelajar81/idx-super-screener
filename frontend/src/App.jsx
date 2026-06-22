@@ -597,7 +597,7 @@ function App() {
                 </div>
               </div>
             </div>
-            </div>
+
 
             {/* Master Sensus & Sub Navbar untuk Menu IDX */}
             {['swing', 'kavaleri', 'ninja'].includes(activeTab) && (

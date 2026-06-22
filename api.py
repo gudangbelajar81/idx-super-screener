@@ -808,8 +808,9 @@ def scan_all_ninja():
 
 @app.get("/api/init-db")
 def init_db_endpoint():
-    conn = get_db_connection()
+    conn = None
     try:
+        conn = get_db_connection()
         with conn.cursor() as cursor:
             # Tabel idx_universe
             cursor.execute("""
@@ -859,9 +860,12 @@ def init_db_endpoint():
                 
         conn.commit()
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        import traceback
+        err_msg = traceback.format_exc()
+        return {"status": "error", "message": str(e), "traceback": err_msg}
     finally:
-        conn.close()
+        if conn:
+            conn.close()
     
     return {"status": "success", "message": "Database tables created and seeded successfully!"}
 

@@ -363,49 +363,80 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
             scalp_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()
-        
+    
+    # Fallback jika idx_universe kosong
     if not scalp_universe:
-        return {"data": []}
+        scalp_universe = [
+            "BUMI.JK","BRMS.JK","BBYB.JK","ARTO.JK","GOTO.JK","BUKA.JK","VKTR.JK",
+            "WIRG.JK","WIFI.JK","DOID.JK","HRUM.JK","ESSA.JK","NCKL.JK","PGEO.JK",
+            "MBMA.JK","CUAN.JK","PANI.JK","PTMP.JK","BRPT.JK","MDKA.JK"
+        ]
 
-    intraday_data = download_intraday_data(scalp_universe, interval="5m", period="5d", use_premium=premium, goapi_key=x_goapi_key)
+    # Ninja gunakan data harian (intraday 5m Yahoo IDX sangat tidak stabil)
+    # Data 3 bulan cukup untuk analisa volume spike & scalp
+    daily_data = download_daily_data(scalp_universe, period="3mo", use_premium=premium, goapi_key=x_goapi_key)
     results = []
     
-    for ticker, df in intraday_data.items():
-        if df.empty:
+    for ticker, df in daily_data.items():
+        if df is None or df.empty or len(df) < 20:
             continue
-            
-        last_close = df['Close'].iloc[-1]
         
-        item = {
-            "ticker": ticker.replace(".JK", ""),
-            "price": float(last_close),
-            "signal": False,
-            "status": "Sepi",
-            "reason": ""
-        }
-        
-        analysis = analyze_ninja_scalper(df)
-        item["signal"] = analysis.get("signal", False)
-        item["tp"] = analysis.get("tp")
-        item["sl"] = analysis.get("sl")
-        
-        if item["signal"]:
-            item["status"] = "HAKA"
-            item["reason"] = f"Vol Spikes! Naik {analysis.get('spread_pct', 0):.2f}% | CMF:{analysis.get('cmf', 0)}"
-            notify_signal(item, mode="ninja")
+        try:
+            last_close = float(df['Close'].iloc[-1])
             
-            # Auto beli di Portofolio Robot
-            if item.get("tp") and item.get("sl"):
-                record_paper_trade(item["ticker"], item["price"], item["tp"], item["sl"])
-        elif analysis.get("volume_spike"):
-            item["status"] = "Waspada"
-            item["reason"] = "Volume besar tapi harga stagnan"
-        else:
-            item["reason"] = "Tidak ada lonjakan volume"
+            item = {
+                "ticker": ticker.replace(".JK", ""),
+                "price": last_close,
+                "signal": False,
+                "status": "Sepi",
+                "reason": ""
+            }
             
-        results.append(item)
+            # Hitung Volume Spike: volume hari ini vs rata-rata 20 hari
+            avg_vol = df['Volume'].tail(20).mean()
+            last_vol = df['Volume'].iloc[-1]
+            prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else last_close
+            
+            vol_spike = last_vol > (avg_vol * 2.0)  # Volume 2x rata-rata
+            price_up = last_close > prev_close       # Harga naik
+            
+            # Hitung persentase kenaikan harga
+            spread_pct = ((last_close - prev_close) / prev_close * 100) if prev_close > 0 else 0
+            
+            # Hitung CMF (Chaikin Money Flow) sederhana
+            try:
+                from app.services.engines.technical_engine import calc_chaikin_money_flow
+                cmf = calc_chaikin_money_flow(df, period=14)
+                strong_flow = cmf > 0.05
+            except Exception:
+                cmf = 0
+                strong_flow = vol_spike and price_up
+            
+            signal = vol_spike and price_up and spread_pct > 1.5
+            
+            if signal:
+                item["signal"] = True
+                item["status"] = "HAKA"
+                item["reason"] = f"Volume Spike {last_vol/avg_vol:.1f}x | Naik +{spread_pct:.1f}% | CMF:{round(cmf,3)}"
+                item["tp"] = round(last_close * 1.05, 0)
+                item["sl"] = round(last_close * 0.97, 0)
+                notify_signal(item, mode="ninja")
+                if item.get("tp") and item.get("sl"):
+                    record_paper_trade(item["ticker"], item["price"], item["tp"], item["sl"])
+            elif vol_spike:
+                item["status"] = "Waspada"
+                item["reason"] = f"Volume Spike {last_vol/avg_vol:.1f}x tapi harga stagnan"
+            else:
+                item["reason"] = f"Volume normal. Naik {spread_pct:.1f}%"
+            
+            results.append(item)
+            
+        except Exception as e:
+            print(f"[Ninja Scan] Error pada {ticker}: {e}")
+            continue
         
     return {"data": results}
+
 
 @router.get("/api/scan/whale")
 def scan_whale():

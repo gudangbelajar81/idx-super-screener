@@ -441,18 +441,24 @@ function App() {
 
         {/* --- TAB HOME (COMMAND CENTER) --- */}
         {activeTab === 'home' && (
-          <div className="tab-content">
-            <div className="command-center-header">
+          <div className="tab-content" style={{ position: 'relative', minHeight: '60vh' }}>
+            {/* Watermark Radar Paus */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.03, pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 0, userSelect: 'none' }}>
+              <span style={{ fontSize: '250px', lineHeight: 1, filter: 'drop-shadow(0 0 50px rgba(255,255,255,0.5))' }}>🐋</span>
+              <span style={{ fontSize: '60px', fontWeight: '900', color: '#fff', whiteSpace: 'nowrap', letterSpacing: '10px', textTransform: 'uppercase', textShadow: '0 0 30px rgba(255,255,255,0.5)' }}>Radar Paus</span>
+            </div>
+            
+            <div className="command-center-header" style={{ position: 'relative', zIndex: 1 }}>
               <h2 style={{margin: 0}}>Kandidat Elite Aktif</h2>
             </div>
             
             {compositeLoading ? (
-              <div className="radar-loader-container">
+              <div className="radar-loader-container" style={{ position: 'relative', zIndex: 1 }}>
                 <div className="radar-scanner"></div>
                 <p>Menarik data dari 4 algoritma utama...</p>
               </div>
             ) : (
-              <div className="stock-grid elite-grid">
+              <div className="stock-grid elite-grid" style={{ position: 'relative', zIndex: 1 }}>
                 {compositeData.map((stock, i) => (
                   <div key={i} className="stock-card elite-card">
                     <div className="elite-glow"></div>

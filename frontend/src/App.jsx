@@ -353,6 +353,34 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
+        {/* Macro Panel di Top */}
+        {activeTab !== 'home' && activeTab !== 'settings' && activeTab !== 'portfolio' && activeTab !== 'global' && (
+          <div className="macro-panel" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: 0, padding: '12px 24px', margin: 0, background: 'rgba(255,255,255,0.02)' }}>
+            <div className="macro-left">
+              <Globe size={16} />
+              <span className="macro-title">Kondisi Makro Pasar:</span>
+              {macroData ? (
+                <span className={`macro-badge ${macroData.market_condition?.toLowerCase()}`}>
+                  {macroData.market_condition} ({macroData.macro_score}/100)
+                </span>
+              ) : (
+                <span className="macro-badge netral">Belum Dicek</span>
+              )}
+              {macroData && (
+                <div className="macro-indicators">
+                  <span>IHSG: <b>{macroData.ihsg?.trend}</b></span>
+                  <span>USD/IDR: <b>{macroData.usdidr?.value?.toLocaleString('id-ID')}</b></span>
+                  <span>Coal: <b>{macroData.coal?.trend}</b></span>
+                  <span>Gold: <b>{macroData.gold?.trend}</b></span>
+                </div>
+              )}
+            </div>
+            <button className="btn-macro" onClick={fetchMacro} disabled={macroLoading}>
+              {macroLoading ? <div className="loader" style={{width:14,height:14}}></div> : <Globe size={14} />}
+              Cek Makro
+            </button>
+          </div>
+        )}
         <header className="header">
           <h1>
             {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Scanner IDX' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
@@ -508,32 +536,7 @@ function App() {
 
         {activeTab !== 'home' && activeTab !== 'settings' && activeTab !== 'portfolio' && activeTab !== 'global' && (
           <div className="scan-view">
-            {/* Macro Panel */}
-            <div className="macro-panel">
-              <div className="macro-left">
-                <Globe size={16} />
-                <span className="macro-title">Kondisi Makro Pasar:</span>
-                {macroData ? (
-                  <span className={`macro-badge ${macroData.market_condition?.toLowerCase()}`}>
-                    {macroData.market_condition} ({macroData.macro_score}/100)
-                  </span>
-                ) : (
-                  <span className="macro-badge netral">Belum Dicek</span>
-                )}
-                {macroData && (
-                  <div className="macro-indicators">
-                    <span>IHSG: <b>{macroData.ihsg?.trend}</b></span>
-                    <span>USD/IDR: <b>{macroData.usdidr?.value?.toLocaleString('id-ID')}</b></span>
-                    <span>Coal: <b>{macroData.coal?.trend}</b></span>
-                    <span>Gold: <b>{macroData.gold?.trend}</b></span>
-                  </div>
-                )}
-              </div>
-              <button className="btn-macro" onClick={fetchMacro} disabled={macroLoading}>
-                {macroLoading ? <div className="loader" style={{width:14,height:14}}></div> : <Globe size={14} />}
-                Cek Makro
-              </button>
-            </div>
+
 
 
 

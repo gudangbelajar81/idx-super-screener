@@ -326,22 +326,14 @@ function App() {
               <LayoutDashboard size={18} color="#00ffcc" />
               <span style={{color: '#00ffcc', fontWeight: 'bold', textShadow: '0 0 5px rgba(0, 255, 204, 0.5)'}}>Command Center</span>
             </li>
-            <li className={`sidebar-item ${activeTab === 'swing' ? 'active' : ''}`} onClick={() => setActiveTab('swing')}>
+            <li className={`sidebar-item ${['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'active' : ''}`} onClick={() => setActiveTab('swing')}>
               <TrendingUp size={18} />
-              Mode Benteng
+              Menu IDX
             </li>
-          <li className={`sidebar-item ${activeTab === 'kavaleri' ? 'active' : ''}`} onClick={() => setActiveTab('kavaleri')}>
-            <Zap size={18} />
-            Mode Kavaleri
-          </li>
-          <li className={`sidebar-item ${activeTab === 'whale' ? 'active' : ''}`} onClick={() => setActiveTab('whale')}>
-            <span style={{ fontSize: '18px' }}>🐋</span>
-            Radar Paus
-          </li>
-          <li className={`sidebar-item ${activeTab === 'ninja' ? 'active' : ''}`} onClick={() => setActiveTab('ninja')}>
-            <Activity size={18} />
-            Mode Ninja
-          </li>
+            <li className={`sidebar-item ${activeTab === 'whale' ? 'active' : ''}`} onClick={() => setActiveTab('whale')}>
+              <span style={{ fontSize: '18px' }}>🐋</span>
+              Radar Paus
+            </li>
           <li className={`sidebar-item premium-glow ${activeTab === 'global' ? 'active' : ''}`} onClick={() => setActiveTab('global')}>
             <Globe size={18} color="#f1c40f" />
             <span style={{color: '#f1c40f', fontWeight: 'bold'}}>Global Astro</span>
@@ -360,9 +352,24 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
+        {/* Sub Navbar untuk Menu IDX */}
+        {['swing', 'kavaleri', 'ninja'].includes(activeTab) && (
+          <div style={{ display: 'flex', gap: '10px', padding: '0 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>
+            <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px' }}>
+              Mode Benteng
+            </button>
+            <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'kavaleri' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'kavaleri' ? 'black' : 'white', borderRadius: '8px' }}>
+              Mode Kavaleri
+            </button>
+            <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'ninja' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'ninja' ? 'black' : 'white', borderRadius: '8px' }}>
+              Mode Ninja
+            </button>
+          </div>
+        )}
+
         <header className="header">
           <h1>
-            {activeTab === 'home' ? 'Ultimate Command Center' : activeTab === 'swing' ? 'Benteng (Swing Trading)' : activeTab === 'kavaleri' ? 'Kavaleri (Fast Swing SMC)' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'ninja' ? 'Ninja (Gorengan Scalper)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
+            {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Scanner IDX' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
           </h1>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
 

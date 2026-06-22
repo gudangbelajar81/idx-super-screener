@@ -35,28 +35,46 @@ yf_history_cache = TTLCache(maxsize=20, ttl=900)
 def _get_bulk_yf_history(tickers_tuple, period, interval):
     tickers = list(tickers_tuple)
     print(f"[Bulk Fetch] Mendownload history {len(tickers)} saham (period={period}, interval={interval}) via Yahoo...")
+    
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+    })
+    
     try:
-        data = yf.download(tickers, period=period, interval=interval, threads=True, progress=False)
+        data = yf.download(tickers, period=period, interval=interval, threads=True, progress=False, session=session)
     except Exception as e:
         print(f"Gagal bulk download YF: {e}")
         return {}
         
     data_dict = {}
+    if data is None or data.empty:
+        print("[Bulk Fetch] Warning: Data kosong dari Yahoo Finance.")
+        return {}
+        
     for ticker in tickers:
         try:
             if len(tickers) == 1:
-                df = data.dropna()
+                df = data.ffill().fillna(0)
+                df = df[df['Close'] > 0]
             else:
-                df = pd.DataFrame({
-                    'Open': data['Open'][ticker],
-                    'High': data['High'][ticker],
-                    'Low': data['Low'][ticker],
-                    'Close': data['Close'][ticker],
-                    'Volume': data['Volume'][ticker]
-                }).dropna()
+                # Pastikan format data adalah MultiIndex (kolom, ticker)
+                if isinstance(data.columns, pd.MultiIndex):
+                    df = pd.DataFrame({
+                        'Open': data['Open'][ticker],
+                        'High': data['High'][ticker],
+                        'Low': data['Low'][ticker],
+                        'Close': data['Close'][ticker],
+                        'Volume': data['Volume'][ticker]
+                    }).ffill().fillna(0)
+                    df = df[df['Close'] > 0] # Hanya ambil data yang valid
+                else:
+                    df = pd.DataFrame()
             if not df.empty:
                 data_dict[ticker] = df
-        except Exception:
+        except Exception as e:
             pass
     return data_dict
 

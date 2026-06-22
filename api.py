@@ -884,6 +884,25 @@ def init_db_endpoint():
     return {"status": "success", "message": "Database tables created and seeded successfully!"}
 
 
+@app.get("/api/debug-universe")
+def debug_universe():
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as count FROM idx_universe")
+            count = cursor.fetchone()['count']
+            
+            cursor.execute("SELECT COUNT(*) as count FROM watchlists")
+            wl_count = cursor.fetchone()['count']
+            
+            return {"universe_count": count, "watchlist_count": wl_count}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if conn:
+            conn.close()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

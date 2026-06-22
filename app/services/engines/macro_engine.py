@@ -84,7 +84,7 @@ def get_macro_data() -> dict:
     
     try:
         # ===== 3. Batu Bara (Penting untuk saham energi IDX) =====
-        coal_df = yf.download("LLCoal.DE", period="1mo", interval="1d", progress=False)
+        coal_df = yf.download("MTF=F", period="1mo", interval="1d", progress=False)
         if not coal_df.empty and len(coal_df) > 5:
             coal_close = coal_df['Close'].squeeze()
             last_coal = float(coal_close.iloc[-1])

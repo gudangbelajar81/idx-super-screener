@@ -15,3 +15,6 @@ SCALP_UNIVERSE = [
 
 # Konfigurasi Teknis
 MIN_DAILY_VOLUME = 5_000_000_000 # 5 Miliar Rupiah per hari untuk keamanan Swing Trading
+
+import os
+API_SECRET_KEY = os.environ.get("API_SECRET_KEY", "KunciRahasiaBos88")

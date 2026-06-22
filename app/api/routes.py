@@ -23,8 +23,18 @@ from app.services.engines.notif_engine import send_telegram_message
 from app.services.engines.paper_engine import record_paper_trade, get_paper_portfolio, evaluate_open_trades
 from app.services.engines.whale_engine import scan_whale_accumulation
 from app.services.engines.astro_engine import get_astro_cycles, get_current_astro_forecast
+from fastapi import Security, Depends
+from fastapi.security.api_key import APIKeyHeader
+from app.core.config import API_SECRET_KEY
 
 router = APIRouter()
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != API_SECRET_KEY:
+        raise HTTPException(status_code=403, detail="Akses Ditolak: Kunci API Salah atau Tidak Ada")
+    return api_key
 
 
 class WatchlistItem(BaseModel):
@@ -36,13 +46,13 @@ def get_watchlist():
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id, ticker, mode FROM watchlists ORDER BY id DESC")
+            cursor.execute("SELECT id, ticker, mode FROM watchlists ORDER BY id DESC LIMIT 500")
             return {"data": cursor.fetchall()}
     finally:
         conn.close()
 
 @router.post("/api/watchlist")
-def add_watchlist(item: WatchlistItem):
+def add_watchlist(item: WatchlistItem, api_key: str = Depends(verify_api_key)):
     # Ensure ticker ends with .JK for Yahoo Finance
     ticker = item.ticker.upper()
     if not ticker.endswith(".JK"):
@@ -63,7 +73,7 @@ def add_watchlist(item: WatchlistItem):
         conn.close()
 
 @router.delete("/api/watchlist/{id}")
-def delete_watchlist(id: int):
+def delete_watchlist(id: int, api_key: str = Depends(verify_api_key)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -74,7 +84,7 @@ def delete_watchlist(id: int):
         conn.close()
 
 @router.post("/api/sensus")
-def trigger_sensus():
+def trigger_sensus(api_key: str = Depends(verify_api_key)):
     """
     Menjalankan proses Sensus Emiten Pilihan.
     Menghapus watchlist lama, dan memasukkan saham-saham pilihan yang lolos sensor ketat.
@@ -104,7 +114,7 @@ def trigger_sensus():
         conn.close()
 
 @router.post("/api/sensus/ninja")
-def trigger_sensus_ninja():
+def trigger_sensus_ninja(api_key: str = Depends(verify_api_key)):
     """
     Menjalankan proses Sensus khusus Saham Gorengan (Ninja).
     Menghapus watchlist ninja lama, dan memasukkan saham-saham liar yang sedang meledak volumenya.
@@ -132,7 +142,7 @@ def trigger_sensus_ninja():
         conn.close()
 
 @router.post("/api/sensus/kavaleri")
-def trigger_sensus_kavaleri():
+def trigger_sensus_kavaleri(api_key: str = Depends(verify_api_key)):
     """Menjalankan kurasi khusus untuk Mode Kavaleri (Fast Swing)"""
     curated_tickers = run_sensus_kavaleri()
     conn = get_db_connection()

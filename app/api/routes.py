@@ -174,12 +174,33 @@ def get_candidates(mode: str):
     category_map = {"swing": "SWING", "kavaleri": "KAVALERI", "ninja": "NINJA"}
     category = category_map.get(mode.lower(), "SWING")
     
+    # Daftar fallback jika idx_universe masih kosong (belum ada Sensus Master)
+    FALLBACK = {
+        "SWING": ["BBCA.JK","BBRI.JK","BMRI.JK","TLKM.JK","ASII.JK","UNTR.JK","KLBF.JK","INDF.JK","ICBP.JK","ADRO.JK","PTBA.JK","ITMG.JK","BRIS.JK","ANTM.JK","MDKA.JK","CPIN.JK","MYOR.JK","AMRT.JK","TOWR.JK","EXCL.JK"],
+        "KAVALERI": ["BBCA.JK","BBRI.JK","BMRI.JK","BBNI.JK","TLKM.JK","ASII.JK","GOTO.JK","AMMN.JK","BREN.JK","TPIA.JK","UNTR.JK","PGAS.JK","AKRA.JK","INKP.JK","MAPI.JK","EXCL.JK","ISAT.JK","MTEL.JK","TOWR.JK","TBIG.JK"],
+        "NINJA": ["BUMI.JK","BRMS.JK","BBYB.JK","ARTO.JK","GOTO.JK","BUKA.JK","VKTR.JK","WIRG.JK","WIFI.JK","DOID.JK","HRUM.JK","ESSA.JK","PSAB.JK","NCKL.JK","PGEO.JK","MBMA.JK","STRK.JK","CUAN.JK","PANI.JK","PTMP.JK"]
+    }
+    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             order_by = "avg_value DESC" if category != "NINJA" else "volatility DESC"
             cursor.execute(f"SELECT ticker, avg_value FROM idx_universe WHERE category=%s ORDER BY {order_by} LIMIT 50", (category,))
             rows = cursor.fetchall()
+            
+            # Jika database kosong, gunakan fallback hardcoded
+            if not rows:
+                results = []
+                for t in FALLBACK.get(category, []):
+                    results.append({
+                        "ticker": t.replace('.JK', ''),
+                        "price": 0,
+                        "liquidity": 0,
+                        "signal": False,
+                        "status": "KANDIDAT MENTAH",
+                        "reason": "Data default — Jalankan Sensus Master untuk hasil aktual"
+                    })
+                return {"data": results}
             
             results = []
             for row in rows:
@@ -194,6 +215,7 @@ def get_candidates(mode: str):
             return {"data": results}
     finally:
         conn.close()
+
 
 @router.get("/api/scan/swing")
 def scan_swing(premium: bool = True, x_goapi_key: str = Header(None)):
@@ -291,7 +313,7 @@ def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
         if df.empty: continue
         t_clean = t_raw.replace(".JK", "")
         
-        analysis = analyze_kavaleri_special(df)
+        analysis = analyze_cavalry_fast_swing(df)
         # Jika sinyal menyala, kirim notifikasi
         item = {
             "ticker": t_clean,

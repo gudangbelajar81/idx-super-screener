@@ -170,7 +170,7 @@ def _format_provider_endpoint(endpoint: str, ticker: str, lookback_days: int) ->
     return urlunparse((parsed.scheme, parsed.netloc, path, parsed.params, urlencode(replaced_query), parsed.fragment))
 
 
-def _request_provider_json(provider: MarketDataProviderInput, ticker: str, lookback_days: int) -> dict:
+def _request_provider_json(provider, ticker: str, lookback_days: int) -> dict:
     url = _format_provider_endpoint(provider.endpoint, ticker, lookback_days)
     parsed = urlparse(url)
     headers = {"Accept": "application/json"}
@@ -329,7 +329,7 @@ def normalize_provider_bandarmology(payload: object, ticker: str, provider_name:
     }
 
 
-def build_live_bandarmology(df: pd.DataFrame, ticker: str, provider: MarketDataProviderInput | None, lookback_days: int) -> dict:
+def build_live_bandarmology(df: pd.DataFrame, ticker: str, provider, lookback_days: int) -> dict:
     internal = build_bandarmology(df, ticker)
     if not provider:
         return internal
@@ -349,7 +349,7 @@ def build_live_bandarmology(df: pd.DataFrame, ticker: str, provider: MarketDataP
         return fallback
 
 
-async def build_ohlcv_report(session: AsyncSession, ticker: str, lookback_days: int = 260) -> dict:
+async def build_ohlcv_report(session, ticker: str, lookback_days: int = 260) -> dict:
     df = await load_price_frame(session, ticker.upper(), max(lookback_days, 260))
     enriched = enrich_ohlcv(df).tail(lookback_days)
     points = []
@@ -376,10 +376,10 @@ async def build_ohlcv_report(session: AsyncSession, ticker: str, lookback_days: 
 
 
 async def build_ohlcv_live_report(
-    session: AsyncSession,
+    session,
     ticker: str,
     lookback_days: int,
-    market_data_providers: list[MarketDataProviderInput] | None = None,
+    market_data_providers = None,
 ) -> dict:
     df = await load_price_frame(session, ticker.upper(), max(lookback_days, 260))
     enriched = enrich_ohlcv(df).tail(lookback_days)

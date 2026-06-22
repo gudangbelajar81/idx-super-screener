@@ -107,8 +107,13 @@ def build_universe():
                     df['Value'] = df['Close'] * df['Volume']
                     avg_value = df['Value'].tail(20).mean()
                     
-                    df['Range'] = (df['High'] - df['Low']) / df['Low']
+                    # Handle division by zero on Low
+                    df['Range'] = np.where(df['Low'] > 0, (df['High'] - df['Low']) / df['Low'], 0)
                     avg_volatility = df['Range'].tail(20).mean()
+                    
+                    # Cegah NaN atau Infinity crash saat Insert Database
+                    avg_value = float(avg_value) if np.isfinite(avg_value) else 0.0
+                    avg_volatility = float(avg_volatility) if np.isfinite(avg_volatility) else 0.0
                     
                     if avg_value < MIN_DAILY_VOLUME:
                         category = "SAMPAH"
@@ -120,13 +125,14 @@ def build_universe():
                         else:
                             category = "SWING"
                             
-                    results.append((ticker, category, float(avg_value), float(avg_volatility)))
-                except Exception:
-                    results.append((ticker, "SAMPAH", 0, 0))
+                    results.append((ticker, category, avg_value, avg_volatility))
+                except Exception as e:
+                    print(f"Error proses {ticker}: {e}")
+                    results.append((ticker, "SAMPAH", 0.0, 0.0))
         except Exception as e:
             print(f"[Universe Builder] Batch {batch_num} gagal didownload: {e}")
             for ticker in chunk:
-                results.append((ticker, "SAMPAH", 0, 0))
+                results.append((ticker, "SAMPAH", 0.0, 0.0))
 
     # Simpan ke Database
     set_status("running", 95, "Menyimpan hasil ke database...")

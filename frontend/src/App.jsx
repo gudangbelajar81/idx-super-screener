@@ -58,6 +58,10 @@ function App() {
   const [engineStatus, setEngineStatus] = useState('idle');
   const [engineMsg, setEngineMsg] = useState('');
   const [engineElapsed, setEngineElapsed] = useState(0);
+
+  // View Mode & Sorting State
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' atau 'table'
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [engineType, setEngineType] = useState('');
 
   const startEngineTracking = (type) => {
@@ -436,6 +440,65 @@ function App() {
   const totalSignals = currentData.filter(d => d.signal).length;
   const winRate = totalScanned ? Math.round((totalSignals / totalScanned) * 100) : 0;
 
+  // Sorting Logic
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedData = [...currentData].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    
+    let aVal = a[sortConfig.key];
+    let bVal = b[sortConfig.key];
+    
+    // Khusus properti bersarang atau sinyal
+    if (sortConfig.key === 'signal') {
+      aVal = a.signal ? 1 : 0;
+      bVal = b.signal ? 1 : 0;
+    }
+    
+    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const renderTable = () => (
+    <div className="table-container" style={{ overflowX: 'auto', marginTop: '15px' }}>
+      <table className="screener-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: 'white' }}>
+        <thead>
+          <tr style={{ background: 'rgba(255, 255, 255, 0.1)' }}>
+            <th onClick={() => handleSort('ticker')} style={{ padding: '12px', cursor: 'pointer' }}>Ticker ↕</th>
+            <th onClick={() => handleSort('price')} style={{ padding: '12px', cursor: 'pointer' }}>Harga ↕</th>
+            <th onClick={() => handleSort('status')} style={{ padding: '12px', cursor: 'pointer' }}>Status ↕</th>
+            <th onClick={() => handleSort('reason')} style={{ padding: '12px', cursor: 'pointer' }}>Keterangan ↕</th>
+            <th onClick={() => handleSort('signal')} style={{ padding: '12px', cursor: 'pointer' }}>Sinyal VIP ↕</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedData.map((item, idx) => (
+            <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: item.signal ? 'rgba(46, 204, 113, 0.1)' : 'transparent' }}>
+              <td style={{ padding: '12px' }}><strong>{item.ticker.replace('.JK', '')}</strong></td>
+              <td style={{ padding: '12px' }}>Rp {item.price ? item.price.toLocaleString('id-ID') : '-'}</td>
+              <td style={{ padding: '12px' }}>
+                <span className={`badge ${item.status ? item.status.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g,'') : ''}`}>
+                  {item.status}
+                </span>
+              </td>
+              <td style={{ padding: '12px', fontSize: '13px' }}>{item.reason || '-'}</td>
+              <td style={{ padding: '12px' }}>
+                {item.signal ? <span className="badge success">ADA SINYAL</span> : <span className="badge neutral">-</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="app-container">
       {/* Sidebar */}
@@ -800,7 +863,15 @@ function App() {
 
             {/* Results Container */}
             <div className="results-container">
-              <div className="scanner-header" style={{ justifyContent: 'flex-end' }}>
+              <div className="scanner-header" style={{ justifyContent: 'space-between' }}>
+                <div style={{display: 'flex', gap: '10px'}}>
+                  {['swing', 'ninja', 'kavaleri'].includes(activeTab) && (
+                    <>
+                      <button className={`btn-toggle ${viewMode === 'cards' ? 'active' : ''}`} onClick={() => setViewMode('cards')} style={{ padding: '8px 12px', background: viewMode === 'cards' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'cards' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>💳 Cards</button>
+                      <button className={`btn-toggle ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} style={{ padding: '8px 12px', background: viewMode === 'table' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'table' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>📄 Table</button>
+                    </>
+                  )}
+                </div>
                 <div style={{display:'flex', gap:'10px'}}>
                   <button className="btn-scan" onClick={handleScan} disabled={loading} style={{background: 'var(--color-green)', color: 'black'}}>
                     {loading ? <div className="loader"></div> : <Search size={18} />}
@@ -809,109 +880,113 @@ function App() {
                 </div>
               </div>
 
-              <div className="stock-grid">
-                {currentData.length === 0 && !loading && (
-                  <p style={{ color: 'var(--text-muted)' }}>Belum ada data. Klik tombol "Mulai Pindai".</p>
-                )}
-                
-                {currentData.map((stock) => (
-                  <div 
-                    key={stock.ticker} 
-                    className={`stock-card ${stock.signal ? (activeTab === 'swing' ? 'highlight-green' : 'highlight-pink') : ''}`}
-                    onClick={() => setSelectedStock(stock)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="stock-card-header">
-                      <div>
-                        <div className="ticker">{stock.ticker}</div>
-                        <div className="price">Rp {stock.price.toLocaleString('id-ID')}</div>
-                      </div>
-                      <div className={`badge ${stock.status.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g,'')}`}>
-                        {stock.status}
-                      </div>
-                    </div>
-                    <div className="reason">{stock.reason}</div>
-                    
-                    {activeTab === 'whale' && (
-                      <div className="tp-sl-container" style={{ marginTop: '10px' }}>
-                        <div className="tp-sl-row">
-                          <div className="tp-block">
-                            <span className="tp-label">TOP BUYER</span>
-                            <span className="tp-value" style={{ color: '#fff' }}>{stock.top_buyer}</span>
-                            <span className="tp-pct tp-up">+{stock.net_volume.toLocaleString('id-ID')} Lot</span>
-                          </div>
-                          <div className="sl-block">
-                            <span className="tp-label">MODAL BANDAR</span>
-                            <span className="tp-value sl-val">Rp {stock.avg_price.toLocaleString('id-ID')}</span>
-                            <span className={`tp-pct ${stock.diff_pct < 0 ? 'sl-down' : 'tp-up'}`}>{stock.diff_pct}%</span>
-                          </div>
+              {viewMode === 'table' && ['swing', 'ninja', 'kavaleri'].includes(activeTab) ? (
+                renderTable()
+              ) : (
+                <div className="stock-grid">
+                  {currentData.length === 0 && !loading && (
+                    <p style={{ color: 'var(--text-muted)' }}>Belum ada data. Klik tombol "Mulai Pindai".</p>
+                  )}
+                  
+                  {currentData.map((stock) => (
+                    <div 
+                      key={stock.ticker} 
+                      className={`stock-card ${stock.signal ? (activeTab === 'swing' ? 'highlight-green' : 'highlight-pink') : ''}`}
+                      onClick={() => setSelectedStock(stock)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="stock-card-header">
+                        <div>
+                          <div className="ticker">{stock.ticker}</div>
+                          <div className="price">Rp {stock.price.toLocaleString('id-ID')}</div>
                         </div>
-                        {stock.is_golden && (
-                          <div className="rr-row" style={{ color: 'var(--color-green)' }}>
-                            <strong>🌟 GOLDEN ENTRY (Aman)</strong>
+                        <div className={`badge ${stock.status.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g,'')}`}>
+                          {stock.status}
+                        </div>
+                      </div>
+                      <div className="reason">{stock.reason}</div>
+                      
+                      {activeTab === 'whale' && (
+                        <div className="tp-sl-container" style={{ marginTop: '10px' }}>
+                          <div className="tp-sl-row">
+                            <div className="tp-block">
+                              <span className="tp-label">TOP BUYER</span>
+                              <span className="tp-value" style={{ color: '#fff' }}>{stock.top_buyer}</span>
+                              <span className="tp-pct tp-up">+{stock.net_volume.toLocaleString('id-ID')} Lot</span>
+                            </div>
+                            <div className="sl-block">
+                              <span className="tp-label">MODAL BANDAR</span>
+                              <span className="tp-value sl-val">Rp {stock.avg_price.toLocaleString('id-ID')}</span>
+                              <span className={`tp-pct ${stock.diff_pct < 0 ? 'sl-down' : 'tp-up'}`}>{stock.diff_pct}%</span>
+                            </div>
                           </div>
-                        )}
-                        {stock.is_danger && (
-                          <div className="rr-row" style={{ color: '#ff4757' }}>
-                            <strong>🚨 RAWAN GUYURAN (Tinggi)</strong>
-                          </div>
+                          {stock.is_golden && (
+                            <div className="rr-row" style={{ color: 'var(--color-green)' }}>
+                              <strong>🌟 GOLDEN ENTRY (Aman)</strong>
+                            </div>
+                          )}
+                          {stock.is_danger && (
+                            <div className="rr-row" style={{ color: '#ff4757' }}>
+                              <strong>🚨 RAWAN GUYURAN (Tinggi)</strong>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div style={{display: 'flex', gap: '10px'}}>
+                        <button className="btn-chart" onClick={() => setSelectedChart({ticker: stock.ticker, tp: stock.tp, sl: stock.sl})}>
+                          📈 Buka Grafik
+                        </button>
+                        
+                        {stock.sl && (
+                          <button className="btn-calc" onClick={() => setSelectedCalc(stock)}>
+                            🛡️ Hitung Lot
+                          </button>
                         )}
                       </div>
-                    )}
-                    
-                    <div style={{display: 'flex', gap: '10px'}}>
-                      <button className="btn-chart" onClick={() => setSelectedChart({ticker: stock.ticker, tp: stock.tp, sl: stock.sl})}>
-                        📈 Buka Grafik
-                      </button>
                       
-                      {stock.sl && (
-                        <button className="btn-calc" onClick={() => setSelectedCalc(stock)}>
-                          🛡️ Hitung Lot
-                        </button>
+                      {stock.sentiment && stock.sentiment !== 'NETRAL' && (
+                        <div className={`sentiment-badge ${stock.sentiment.includes('POSITIF') ? 'pos' : stock.sentiment.includes('NEGATIF') ? 'neg' : 'net'}`}>
+                          {stock.sentiment.includes('POSITIF') ? '✔' : '⚠'} Berita: {stock.sentiment}
+                        </div>
+                      )}
+
+                      {activeTab === 'kavaleri' && (
+                        <div style={{marginTop: '10px', display: 'flex', gap: '5px'}}>
+                          {stock.squeeze_fired && (
+                            <span style={{background: '#ffa502', color: '#000', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold'}}>💣 SQUEEZE FIRED</span>
+                          )}
+                          {stock.smc_trap && (
+                            <span style={{background: '#ff4757', color: '#fff', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold'}}>🏦 SMC TRAP DETECTED</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {stock.signal && stock.tp && stock.sl && (
+                        <div className="tp-sl-container">
+                          <div className="tp-sl-row">
+                            <div className="tp-block">
+                              <span className="tp-label">TARGET PROFIT</span>
+                              <span className="tp-value">Rp {Number(stock.tp).toLocaleString('id-ID')}</span>
+                              <span className="tp-pct tp-up">+{(((stock.tp - stock.price) / stock.price) * 100).toFixed(1)}%</span>
+                            </div>
+                            <div className="sl-block">
+                              <span className="tp-label">STOP LOSS</span>
+                              <span className="tp-value sl-val">Rp {Number(stock.sl).toLocaleString('id-ID')}</span>
+                              <span className="tp-pct sl-down">{(((stock.sl - stock.price) / stock.price) * 100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                          {stock.rr && (
+                            <div className="rr-row">
+                              Risk/Reward: <strong>{stock.rr}x</strong>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                    
-                    {stock.sentiment && stock.sentiment !== 'NETRAL' && (
-                      <div className={`sentiment-badge ${stock.sentiment.includes('POSITIF') ? 'pos' : stock.sentiment.includes('NEGATIF') ? 'neg' : 'net'}`}>
-                        {stock.sentiment.includes('POSITIF') ? '✔' : '⚠'} Berita: {stock.sentiment}
-                      </div>
-                    )}
-
-                    {activeTab === 'kavaleri' && (
-                      <div style={{marginTop: '10px', display: 'flex', gap: '5px'}}>
-                        {stock.squeeze_fired && (
-                          <span style={{background: '#ffa502', color: '#000', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold'}}>💣 SQUEEZE FIRED</span>
-                        )}
-                        {stock.smc_trap && (
-                          <span style={{background: '#ff4757', color: '#fff', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold'}}>🏦 SMC TRAP DETECTED</span>
-                        )}
-                      </div>
-                    )}
-                    
-                    {stock.signal && stock.tp && stock.sl && (
-                      <div className="tp-sl-container">
-                        <div className="tp-sl-row">
-                          <div className="tp-block">
-                            <span className="tp-label">TARGET PROFIT</span>
-                            <span className="tp-value">Rp {Number(stock.tp).toLocaleString('id-ID')}</span>
-                            <span className="tp-pct tp-up">+{(((stock.tp - stock.price) / stock.price) * 100).toFixed(1)}%</span>
-                          </div>
-                          <div className="sl-block">
-                            <span className="tp-label">STOP LOSS</span>
-                            <span className="tp-value sl-val">Rp {Number(stock.sl).toLocaleString('id-ID')}</span>
-                            <span className="tp-pct sl-down">{(((stock.sl - stock.price) / stock.price) * 100).toFixed(1)}%</span>
-                          </div>
-                        </div>
-                        {stock.rr && (
-                          <div className="rr-row">
-                            Risk/Reward: <strong>{stock.rr}x</strong>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

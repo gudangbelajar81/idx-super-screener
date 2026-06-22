@@ -612,7 +612,18 @@ function App() {
                         Menyaring seluruh bursa IDX (~800 saham) menggunakan algoritma gratisan (Yahoo Finance) untuk menemukan "Kandidat Saham" potensial. Jalankan ini secara berkala sebelum menekan tombol Scan di bawah.
                       </p>
                     </div>
-
+                    <button
+                      className="btn-scan"
+                      onClick={buildUniverse}
+                      disabled={buildingUniverse}
+                      style={{ background: 'linear-gradient(135deg, var(--color-green), #00b894)', color: 'black', fontWeight: 700, minWidth: 200, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      {buildingUniverse ? (
+                        <><div className="loader" style={{width:14,height:14,borderWidth:2}}></div> Sedang Sensus...</>
+                      ) : (
+                        <><Globe size={16} /> Jalankan Sensus Master</>
+                      )}
+                    </button>
                   </div>
                 </div>
 

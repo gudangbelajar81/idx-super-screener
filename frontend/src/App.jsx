@@ -359,8 +359,12 @@ function App() {
       fetchWatchlist();
     } else if (activeTab === 'portfolio') {
       fetchPortfolio();
-    } else if (['swing', 'kavaleri', 'ninja'].includes(activeTab)) {
-      fetchCandidates(activeTab);
+    } else if (activeTab === 'swing' && swingData.length === 0) {
+      fetchCandidates('swing');
+    } else if (activeTab === 'ninja' && ninjaData.length === 0) {
+      fetchCandidates('ninja');
+    } else if (activeTab === 'kavaleri' && kavaleriData.length === 0) {
+      fetchCandidates('kavaleri');
     }
     // Fetch IPO news only once when first loading
     if (ipoNews.length === 0) {

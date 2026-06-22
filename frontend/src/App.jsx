@@ -30,7 +30,8 @@ function App() {
   const [portfolioData, setPortfolioData] = useState([]);
   const [selectedChart, setSelectedChart] = useState(null);
   const [selectedCalc, setSelectedCalc] = useState(null);
-  
+
+
   // X-Ray State
   const [xrayTicker, setXrayTicker] = useState('');
   const [xrayData, setXrayData] = useState(null);
@@ -51,8 +52,42 @@ function App() {
   }, [serverKey, goapiKey]);
 
   // === PREMIUM / FREE MODE TOGGLE ===
-  // isPremium=true -> GoAPI VIP (potong token), isPremium=false -> Yahoo Finance (gratis)
   const [isPremium, setIsPremium] = useState(false);
+
+  // Engine Status Tracker
+  const [engineStatus, setEngineStatus] = useState('idle');
+  const [engineMsg, setEngineMsg] = useState('');
+  const [engineElapsed, setEngineElapsed] = useState(0);
+  const [engineType, setEngineType] = useState('');
+
+  const startEngineTracking = (type) => {
+    setEngineStatus('running');
+    setEngineType(type);
+    setEngineElapsed(0);
+    setEngineMsg(type === 'sensus' ? 'Sedang menyisir ~800 saham IDX...' : 'Sedang menganalisa kandidat...');
+  };
+
+  const stopEngineTracking = (success = true, msg = '') => {
+    setEngineStatus(success ? 'done' : 'error');
+    setEngineMsg(msg || (success ? 'Selesai!' : 'Mesin bermasalah — coba lagi'));
+    setTimeout(() => setEngineStatus('idle'), 8000);
+  };
+
+  useEffect(() => {
+    let interval;
+    if (engineStatus === 'running') {
+      interval = setInterval(() => {
+        setEngineElapsed(prev => {
+          if (prev >= 120) {
+            stopEngineTracking(false, 'Timeout — mesin tidak merespons (>2 menit)');
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [engineStatus]);
 
   const fetchComposite = async () => {
     setCompositeLoading(true);
@@ -284,12 +319,14 @@ function App() {
   const buildUniverse = async () => {
     if (!window.confirm("Proses Sensus Saham membutuhkan waktu 1-2 menit. Lanjutkan?")) return;
     setBuildingUniverse(true);
+    startEngineTracking('sensus');
     try {
       const res = await axios.post(`${API_BASE}/api/universe/build`);
-      alert(`Sensus Berhasil! ${res.data.total} saham telah diklasifikasikan ke dalam Ember Swing dan Ninja.`);
+      stopEngineTracking(true, `Sensus selesai! ${res.data.total} saham berhasil diklasifikasikan.`);
+      await fetchCandidates(activeTab);
     } catch (err) {
       console.error(err);
-      alert("Sensus Gagal. Cek terminal server.");
+      stopEngineTracking(false, 'Sensus gagal — cek koneksi server.');
     }
     setBuildingUniverse(false);
   };
@@ -339,11 +376,20 @@ function App() {
   const handleScan = () => {
     // Auto-aktifkan Premium saat VIP Scan ditekan
     setIsPremium(true);
-    if (activeTab === 'swing') fetchSwing(true);
-    else if (activeTab === 'ninja') fetchNinja(true);
-    else if (activeTab === 'kavaleri') fetchKavaleri(true);
-    else if (activeTab === 'whale') fetchWhale();
-    else if (activeTab === 'global') fetchGlobal();
+    startEngineTracking('vip');
+    const runScan = async () => {
+      try {
+        if (activeTab === 'swing') await fetchSwing(true);
+        else if (activeTab === 'ninja') await fetchNinja(true);
+        else if (activeTab === 'kavaleri') await fetchKavaleri(true);
+        else if (activeTab === 'whale') await fetchWhale();
+        else if (activeTab === 'global') await fetchGlobal();
+        stopEngineTracking(true, 'Pemindaian VIP berhasil. Lihat hasil di bawah.');
+      } catch (err) {
+        stopEngineTracking(false, 'Pemindaian gagal — coba lagi atau gunakan Free Mode.');
+      }
+    };
+    runScan();
   };
 
   // Sinkronisasi otomatis Sinyal VIP ke Command Center
@@ -649,6 +695,66 @@ function App() {
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Engine Status Bar */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 16px', borderRadius: 10, marginBottom: 4,
+                  background: engineStatus === 'running' ? 'rgba(0,230,118,0.07)'
+                            : engineStatus === 'done'    ? 'rgba(0,150,255,0.07)'
+                            : engineStatus === 'error'   ? 'rgba(255,50,50,0.1)'
+                            : 'rgba(255,255,255,0.02)',
+                  border: engineStatus === 'running' ? '1px solid rgba(0,230,118,0.25)'
+                        : engineStatus === 'done'    ? '1px solid rgba(0,150,255,0.2)'
+                        : engineStatus === 'error'   ? '1px solid rgba(255,50,50,0.3)'
+                        : '1px solid rgba(255,255,255,0.05)',
+                  transition: 'all 0.4s ease'
+                }}>
+                  {/* Status Icon */}
+                  {engineStatus === 'running' && (
+                    <div style={{ position: 'relative', width: 22, height: 22, flexShrink: 0 }}>
+                      <div style={{
+                        width: 22, height: 22, border: '3px solid rgba(0,230,118,0.2)',
+                        borderTop: '3px solid var(--color-green)', borderRadius: '50%',
+                        animation: 'spin 0.7s linear infinite'
+                      }} />
+                    </div>
+                  )}
+                  {engineStatus === 'done' && <span style={{ fontSize: 18 }}>✅</span>}
+                  {engineStatus === 'error' && <span style={{ fontSize: 18, animation: 'pulse 1s infinite' }}>⚠️</span>}
+                  {engineStatus === 'idle' && <span style={{ fontSize: 16 }}>⚙️</span>}
+
+                  {/* Status Text */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600,
+                      color: engineStatus === 'running' ? 'var(--color-green)'
+                           : engineStatus === 'done'    ? '#74b9ff'
+                           : engineStatus === 'error'   ? '#ff6b6b'
+                           : 'var(--text-muted)' }}>
+                      {engineStatus === 'running' ? `⚡ Mesin Berjalan — ${engineType === 'sensus' ? 'Sensus Master' : 'Pemindaian VIP'}`
+                       : engineStatus === 'done'    ? '✓ Proses Selesai'
+                       : engineStatus === 'error'   ? '✗ Mesin Bermasalah'
+                       : '● Status Mesin: Siap'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {engineStatus === 'running'
+                        ? `${engineMsg} (${engineElapsed}s berjalan...)`
+                        : engineMsg || 'Tekan tombol untuk memulai proses.'}
+                    </div>
+                  </div>
+
+                  {/* Elapsed / Progress Pills */}
+                  {engineStatus === 'running' && (
+                    <div style={{
+                      fontSize: 11, fontWeight: 700, color: 'black',
+                      background: engineElapsed > 90 ? '#ff6b6b' : engineElapsed > 60 ? '#ffa502' : 'var(--color-green)',
+                      padding: '3px 10px', borderRadius: 20, flexShrink: 0,
+                      transition: 'background 0.5s'
+                    }}>
+                      {engineElapsed}s
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>

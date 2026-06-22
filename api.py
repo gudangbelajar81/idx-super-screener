@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from typing import List
 import concurrent.futures
 import os
+from urllib.parse import urlparse
+from dbutils.pooled_db import PooledDB
+from cachetools import cached, TTLCache
 
 from config import MIN_DAILY_VOLUME
 from data_engine import download_daily_data, download_intraday_data, download_global_data
@@ -123,23 +126,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from urllib.parse import urlparse
+# Database Connection Pool Helper (Support Railway & Local)
+pool = None
 
-# Database Connection Helper (Support Railway & Local)
-def get_db_connection():
+def init_db_pool():
+    global pool
     db_url = os.environ.get("MYSQL_URL")
     if db_url:
         parsed = urlparse(db_url)
-        return pymysql.connect(
+        pool = PooledDB(
+            creator=pymysql,
+            maxconnections=20,
+            mincached=2,
+            maxcached=5,
+            blocking=True,
             host=parsed.hostname,
             user=parsed.username,
             password=parsed.password,
-            database=parsed.path[1:], # hapus slash di awal
+            database=parsed.path[1:],
             port=parsed.port or 3306,
             cursorclass=pymysql.cursors.DictCursor
         )
     else:
-        return pymysql.connect(
+        pool = PooledDB(
+            creator=pymysql,
+            maxconnections=20,
+            mincached=2,
+            maxcached=5,
+            blocking=True,
             host=os.environ.get("MYSQLHOST", "localhost"),
             user=os.environ.get("MYSQLUSER", "root"),
             password=os.environ.get("MYSQLPASSWORD") or os.environ.get("MYSQL_PASSWORD", ""),
@@ -147,6 +161,12 @@ def get_db_connection():
             port=int(os.environ.get("MYSQLPORT", 3306)),
             cursorclass=pymysql.cursors.DictCursor
         )
+
+def get_db_connection():
+    global pool
+    if pool is None:
+        init_db_pool()
+    return pool.connection()
 
 class WatchlistItem(BaseModel):
     ticker: str
@@ -658,7 +678,10 @@ def build_idx_universe():
     result = build_universe()
     return result
 
+swing_cache = TTLCache(maxsize=100, ttl=60)
+
 @app.get("/api/scan/all-swing")
+@cached(cache=swing_cache)
 def scan_all_swing():
     """Scan menggunakan kategori SWING dari Universe"""
     swing_universe = get_universe_by_category("SWING")
@@ -740,7 +763,10 @@ def scan_all_swing():
     return {"data": results}
 
 
+ninja_cache = TTLCache(maxsize=100, ttl=60)
+
 @app.get("/api/scan/all-ninja")
+@cached(cache=ninja_cache)
 def scan_all_ninja():
     """Scan menggunakan kategori NINJA dari Universe"""
     ninja_universe = get_universe_by_category("NINJA")

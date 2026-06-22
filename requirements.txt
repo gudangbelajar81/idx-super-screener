@@ -1,4 +1,4 @@
-﻿fastapi
+fastapi
 uvicorn
 pymysql
 apscheduler
@@ -9,3 +9,6 @@ numpy
 ta
 requests
 pydantic
+DBUtils
+cachetools
+tenacity

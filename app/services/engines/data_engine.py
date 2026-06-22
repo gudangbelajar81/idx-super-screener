@@ -5,8 +5,7 @@ import requests
 import json
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-GOAPI_KEY = "9801bcc5-9a0e-5762-08b8-178ad122"
-GOAPI_HEADERS = {"X-API-KEY": GOAPI_KEY, "Accept": "application/json"}
+import os
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def reliable_get(url, headers, timeout):
@@ -62,7 +61,7 @@ def _download_intraday_free(tickers: list, interval: str = "5m", period: str = "
 # ===========================================================================
 #  PREMIUM MODE: GoAPI VIP (Berbayar, data terkini - untuk Live Trading)
 # ===========================================================================
-def _download_daily_premium(tickers: list, period: str = "1y") -> Dict[str, pd.DataFrame]:
+def _download_daily_premium(tickers: list, period: str = "1y", goapi_key: str = None) -> Dict[str, pd.DataFrame]:
     """
     Mode Premium (VIP GoAPI): Mengunduh data harian terkini untuk saham IDX.
     MEMOTONG TOKEN API. Gunakan saat siap Live Trading.
@@ -73,7 +72,8 @@ def _download_daily_premium(tickers: list, period: str = "1y") -> Dict[str, pd.D
         clean_ticker = ticker.replace(".JK", "") # GoAPI tidak pakai .JK
         try:
             url = f"https://api.goapi.io/stock/idx/{clean_ticker}/historical"
-            res = reliable_get(url, headers=GOAPI_HEADERS, timeout=10)
+            headers = {"X-API-KEY": goapi_key, "Accept": "application/json"} if goapi_key else {"Accept": "application/json"}
+            res = reliable_get(url, headers=headers, timeout=10)
             if res.status_code == 200:
                 data = res.json()
                 if "data" in data and "results" in data["data"]:
@@ -90,7 +90,7 @@ def _download_daily_premium(tickers: list, period: str = "1y") -> Dict[str, pd.D
             print(f"[PREMIUM] Gagal mengunduh {ticker}: {e}")
     return data_dict
 
-def _download_intraday_premium(tickers: list, interval: str = "5m", period: str = "5d") -> Dict[str, pd.DataFrame]:
+def _download_intraday_premium(tickers: list, interval: str = "5m", period: str = "5d", goapi_key: str = None) -> Dict[str, pd.DataFrame]:
     """
     Mode Premium: Yahoo Finance history + Real-Time price dari GoAPI.
     MEMOTONG TOKEN API.
@@ -112,8 +112,9 @@ def _download_intraday_premium(tickers: list, interval: str = "5m", period: str 
                 # 2. Ambil harga absolut detik ini dari GoAPI (ini yang potong token)
                 clean_ticker = ticker.replace(".JK", "")
                 url = f"https://api.goapi.io/stock/idx/prices?symbols={clean_ticker}"
+                headers = {"X-API-KEY": goapi_key, "Accept": "application/json"} if goapi_key else {"Accept": "application/json"}
                 try:
-                    res = reliable_get(url, headers=GOAPI_HEADERS, timeout=5)
+                    res = reliable_get(url, headers=headers, timeout=5)
                 except Exception:
                     res = None
                     
@@ -133,25 +134,25 @@ def _download_intraday_premium(tickers: list, interval: str = "5m", period: str 
 # ===========================================================================
 #  GATEWAY UTAMA: Fungsi Publik dengan Saklar use_premium
 # ===========================================================================
-def download_daily_data(tickers: list, period: str = "1y", use_premium: bool = True) -> Dict[str, pd.DataFrame]:
+def download_daily_data(tickers: list, period: str = "1y", use_premium: bool = True, goapi_key: str = None) -> Dict[str, pd.DataFrame]:
     """
     Gateway utama untuk data harian.
     - use_premium=True  -> GoAPI VIP (potong token, data akurat)
     - use_premium=False -> Yahoo Finance (gratis, delay ~15 menit)
     """
     if use_premium:
-        return _download_daily_premium(tickers, period)
+        return _download_daily_premium(tickers, period, goapi_key)
     else:
         return _download_daily_free(tickers, period)
 
-def download_intraday_data(tickers: list, interval: str = "5m", period: str = "5d", use_premium: bool = True) -> Dict[str, pd.DataFrame]:
+def download_intraday_data(tickers: list, interval: str = "5m", period: str = "5d", use_premium: bool = True, goapi_key: str = None) -> Dict[str, pd.DataFrame]:
     """
     Gateway utama untuk data intraday.
     - use_premium=True  -> Hybrid (Yahoo history + GoAPI realtime, potong token)
     - use_premium=False -> Yahoo Finance saja (gratis)
     """
     if use_premium:
-        return _download_intraday_premium(tickers, interval, period)
+        return _download_intraday_premium(tickers, interval, period, goapi_key)
     else:
         return _download_intraday_free(tickers, interval, period)
 

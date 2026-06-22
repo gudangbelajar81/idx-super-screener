@@ -40,6 +40,15 @@ function App() {
   const [watchlist, setWatchlist] = useState([]);
   const [newTicker, setNewTicker] = useState("");
   const [newMode, setNewMode] = useState("swing");
+  const [serverKey, setServerKey] = useState(localStorage.getItem('SERVER_API_KEY') || "");
+  const [goapiKey, setGoapiKey] = useState(localStorage.getItem('GOAPI_KEY') || "");
+
+  useEffect(() => {
+    if (serverKey) axios.defaults.headers.common['X-API-Key'] = serverKey;
+    if (goapiKey) axios.defaults.headers.common['X-GoAPI-Key'] = goapiKey;
+    localStorage.setItem('SERVER_API_KEY', serverKey);
+    localStorage.setItem('GOAPI_KEY', goapiKey);
+  }, [serverKey, goapiKey]);
 
   // === PREMIUM / FREE MODE TOGGLE ===
   // isPremium=true -> GoAPI VIP (potong token), isPremium=false -> Yahoo Finance (gratis)
@@ -787,6 +796,23 @@ function App() {
 
         {activeTab === 'settings' && (
           <div className="results-container">
+            <div className="universe-builder-card" style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 12, marginBottom: 30, border: '1px solid var(--border-subtle)' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: 'var(--color-orange)' }}>🔐 Brankas Kunci API (Pribadi)</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
+                Masukkan kunci rahasia agar aplikasi Vercel ini bisa membuka gembok server dan menarik data premium. Tersimpan aman di memori browser Anda.
+              </p>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 250 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--color-green)' }}>Kunci Server (X-API-Key)</label>
+                  <input type="password" value={serverKey} onChange={e => setServerKey(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="Masukkan Kunci Server" />
+                </div>
+                <div style={{ flex: 1, minWidth: 250 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--color-blue)' }}>Kunci Provider (GoAPI VIP)</label>
+                  <input type="password" value={goapiKey} onChange={e => setGoapiKey(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="Masukkan Kunci GoAPI" />
+                </div>
+              </div>
+            </div>
+
             <div className="universe-builder-card" style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 12, marginBottom: 30, border: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div>

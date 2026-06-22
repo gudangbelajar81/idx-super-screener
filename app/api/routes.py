@@ -1,6 +1,6 @@
 from app.core.database import get_db_connection
 import pymysql
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -170,7 +170,7 @@ def get_ipo_radar():
     return {"data": ipo_news}
 
 @router.get("/api/scan/swing")
-def scan_swing(premium: bool = True):
+def scan_swing(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -182,7 +182,7 @@ def scan_swing(premium: bool = True):
     if not swing_universe:
         return {"data": []}
 
-    daily_data = download_daily_data(swing_universe, period="1y", use_premium=premium)
+    daily_data = download_daily_data(swing_universe, period="1y", use_premium=premium, goapi_key=x_goapi_key)
     results = []
     
     for ticker, df in daily_data.items():
@@ -244,7 +244,7 @@ def scan_swing(premium: bool = True):
     return {"data": results}
 
 @router.get("/api/scan/kavaleri")
-def scan_kavaleri(premium: bool = True):
+def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
     """Memindai saham mode Kavaleri (Fast Swing 1-7 Hari) dengan TTM Squeeze & SMC"""
     conn = get_db_connection()
     try:
@@ -258,7 +258,7 @@ def scan_kavaleri(premium: bool = True):
         return {"data": [], "message": "Jalankan Sensus Kavaleri terlebih dahulu!"}
         
     yfinance_tickers = [t if t.endswith(".JK") else f"{t}.JK" for t in tickers]
-    data_dict = download_daily_data(yfinance_tickers, period="6mo", use_premium=premium)
+    data_dict = download_daily_data(yfinance_tickers, period="6mo", use_premium=premium, goapi_key=x_goapi_key)
     
     results = []
     for t_raw, df in data_dict.items():
@@ -307,7 +307,7 @@ def scan_kavaleri(premium: bool = True):
     return {"data": results}
 
 @router.get("/api/scan/ninja")
-def scan_ninja(premium: bool = True):
+def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -319,7 +319,7 @@ def scan_ninja(premium: bool = True):
     if not scalp_universe:
         return {"data": []}
 
-    intraday_data = download_intraday_data(scalp_universe, interval="5m", period="5d", use_premium=premium)
+    intraday_data = download_intraday_data(scalp_universe, interval="5m", period="5d", use_premium=premium, goapi_key=x_goapi_key)
     results = []
     
     for ticker, df in intraday_data.items():

@@ -334,10 +334,7 @@ function App() {
               <Activity size={18} />
               Berita dan IPO
             </li>
-            <li className={`sidebar-item ${activeTab === 'whale' ? 'active' : ''}`} onClick={() => setActiveTab('whale')}>
-              <span style={{ fontSize: '18px' }}>🐋</span>
-              Radar Paus
-            </li>
+
           <li className={`sidebar-item premium-glow ${activeTab === 'global' ? 'active' : ''}`} onClick={() => setActiveTab('global')}>
             <Globe size={18} color="#f1c40f" />
             <span style={{color: '#f1c40f', fontWeight: 'bold'}}>Global Astro</span>
@@ -446,10 +443,7 @@ function App() {
         {activeTab === 'home' && (
           <div className="tab-content">
             <div className="command-center-header">
-              <h2>Kandidat Elite Aktif</h2>
-              <button className="btn-primary" onClick={fetchComposite} disabled={compositeLoading}>
-                {compositeLoading ? 'Memindai Seluruh Radar...' : 'Scan Semua Sinyal'}
-              </button>
+              <h2 style={{margin: 0}}>Kandidat Elite Aktif</h2>
             </div>
             
             {compositeLoading ? (
@@ -582,15 +576,7 @@ function App() {
                         Menyaring seluruh bursa IDX (~800 saham) menggunakan algoritma gratisan (Yahoo Finance) untuk menemukan "Kandidat Saham" potensial. Jalankan ini secara berkala sebelum menekan tombol Scan di bawah.
                       </p>
                     </div>
-                    <button 
-                      className="btn-scan" 
-                      onClick={buildUniverse} 
-                      disabled={buildingUniverse}
-                      style={{ background: 'var(--color-green)' }}
-                    >
-                      {buildingUniverse ? <div className="loader"></div> : <Globe size={18} />}
-                      {buildingUniverse ? 'Sedang Sensus...' : 'Jalankan Sensus Master'}
-                    </button>
+
                   </div>
                 </div>
 

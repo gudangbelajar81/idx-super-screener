@@ -330,6 +330,10 @@ function App() {
               <TrendingUp size={18} />
               Menu IDX
             </li>
+            <li className={`sidebar-item ${activeTab === 'news' ? 'active' : ''}`} onClick={() => setActiveTab('news')}>
+              <Activity size={18} />
+              Berita dan IPO
+            </li>
             <li className={`sidebar-item ${activeTab === 'whale' ? 'active' : ''}`} onClick={() => setActiveTab('whale')}>
               <span style={{ fontSize: '18px' }}>🐋</span>
               Radar Paus
@@ -369,7 +373,7 @@ function App() {
 
         <header className="header">
           <h1>
-            {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Scanner IDX' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
+            {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Scanner IDX' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
           </h1>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
 
@@ -545,29 +549,7 @@ function App() {
               </button>
             </div>
 
-            {/* IPO News Panel */}
-            <div className="macro-panel" style={{ marginTop: '15px', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
-                <div className="macro-left">
-                  <Activity size={16} color="var(--color-pink)" />
-                  <span className="macro-title">Radar IPO & Aksi Korporasi:</span>
-                </div>
-                <button className="btn-macro" onClick={fetchIpoNews} disabled={ipoLoading} style={{ padding: '4px 10px', fontSize: '12px' }}>
-                  {ipoLoading ? 'Memperbarui...' : 'Refresh Berita'}
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                {ipoNews.length === 0 && !ipoLoading && <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Belum ada berita IPO hari ini.</p>}
-                {ipoNews.map((news, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '13px', color: 'var(--text-main)', flex: 1 }}>{news.title}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: news.color, background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '12px', marginLeft: '10px', whiteSpace: 'nowrap' }}>
-                      {news.risk}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+
 
             {/* Stats Row */}
             <div className="stats-grid">
@@ -899,6 +881,38 @@ function App() {
           </div>
         )}
         
+        {activeTab === 'news' && (
+          <div className="results-container">
+            <h2>Pusat Informasi & Aksi Korporasi</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 24, marginTop: 8 }}>
+              Pantau sentimen pasar terbaru, jadwal RUPS, pembagian dividen, dan peluang saham IPO yang akan datang.
+            </p>
+            
+            <div className="macro-panel" style={{ marginTop: '15px', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '10px' }}>
+                <div className="macro-left">
+                  <Activity size={16} color="var(--color-pink)" />
+                  <span className="macro-title">Radar Berita Terbaru:</span>
+                </div>
+                <button className="btn-macro" onClick={fetchIpoNews} disabled={ipoLoading} style={{ padding: '8px 16px', fontSize: '14px' }}>
+                  {ipoLoading ? 'Memperbarui...' : 'Refresh Berita'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                {ipoNews.length === 0 && !ipoLoading && <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Belum ada berita IPO hari ini.</p>}
+                {ipoNews.map((news, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text-main)', flex: 1 }}>{news.title}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: news.color, background: 'rgba(0,0,0,0.3)', padding: '6px 12px', borderRadius: '12px', marginLeft: '10px', whiteSpace: 'nowrap' }}>
+                      {news.risk}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'portfolio' && (
           <div className="results-container">
             <h2>Portofolio Robot (Paper Trading)</h2>

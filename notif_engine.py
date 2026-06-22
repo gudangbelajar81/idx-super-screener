@@ -34,10 +34,8 @@ def send_telegram_message(text: str) -> bool:
 
 def notify_signal(stock: dict, mode: str = "swing") -> bool:
     """
-    Memformat dan mengirim notifikasi sinyal saham ke Telegram.
-    
-    stock: dict hasil dari api.py (berisi ticker, price, tp, sl, rr, sentiment)
-    mode: 'swing' atau 'ninja'
+    [TITAN VISUAL v2] Memformat dan mengirim notifikasi sinyal saham ke Telegram.
+    Format: Premium Institutional Grade (Standar J.P. Morgan / Goldman Sachs)
     """
     if not stock.get("signal"):
         return False
@@ -49,30 +47,90 @@ def notify_signal(stock: dict, mode: str = "swing") -> bool:
     rr     = stock.get("rr")
     sentiment = stock.get("sentiment", "NETRAL")
     cmf    = stock.get("cmf", 0)
+    above_vwap = stock.get("above_vwap", None)
+    stoch_k = stock.get("stoch_rsi_k", None)
     
-    mode_icon = "🏰" if mode == "swing" else ("🐎" if mode == "kavaleri" else "🥷")
-    mode_label = "SWING (Benteng)" if mode == "swing" else ("FAST SWING (Kavaleri)" if mode == "kavaleri" else "SCALP (Ninja)")
+    # === HEADER BERDASARKAN MODE ===
+    if mode == "ninja":
+        mode_icon = "🥷"
+        mode_label = "S C A L P I N G   A L E R T"
+        accent = "⚡"
+        urgency = "⏱ <b>EKSEKUSI SEGERA</b> | Time-sensitive!"
+    elif mode == "kavaleri":
+        mode_icon = "⚡"
+        mode_label = "K A V A L E R I   A L E R T"
+        accent = "🎯"
+        urgency = "⚡ <b>SESI AKTIF</b> | Fast Swing Entry!"
+    else:
+        mode_icon = "🏰"
+        mode_label = "S W I N G   S I G N A L"
+        accent = "📊"
+        urgency = "📅 <b>SWING TRADE</b> | Hold 3–10 Hari"
     
-    sentiment_icon = "✅" if "POSITIF" in sentiment else ("⚠️" if "NEGATIF" in sentiment else "➖")
+    # === KALKULASI PERSENTASE ===
+    tp_pct = f"+{((tp - price) / price * 100):.1f}%" if tp and price else "—"
+    sl_pct = f"{((sl - price) / price * 100):.1f}%" if sl and price else "—"
+    rr_text = f"{rr}x" if rr else "—"
     
-    tp_pct = f"+{((tp - price) / price * 100):.1f}%" if tp and price else "N/A"
-    sl_pct = f"{((sl - price) / price * 100):.1f}%" if sl and price else "N/A"
-    rr_text = f"{rr}x" if rr else "N/A"
+    # === SENTIMENT BADGE ===
+    if "POSITIF" in sentiment:
+        sent_badge = "🟢 BULLISH"
+    elif "NEGATIF" in sentiment:
+        sent_badge = "🔴 BEARISH"
+    else:
+        sent_badge = "⚪ NETRAL"
     
+    # === CMF STRENGTH ===
+    if cmf > 0.15:
+        cmf_badge = "💪 Sangat Kuat"
+    elif cmf > 0.05:
+        cmf_badge = "✅ Kuat"
+    elif cmf > 0:
+        cmf_badge = "➕ Positif"
+    else:
+        cmf_badge = "⚠️ Lemah"
+    
+    # === VWAP STATUS ===
+    vwap_line = ""
+    if above_vwap is not None:
+        vwap_status = "✅ Di Atas VWAP" if above_vwap else "⚠️ Di Bawah VWAP"
+        vwap_line = f"📍 VWAP    : {vwap_status}\n"
+    
+    # === STOCHASTIC RSI ===
+    stoch_line = ""
+    if stoch_k is not None:
+        stoch_pct = stoch_k * 100
+        if stoch_pct < 50:
+            stoch_status = f"🔵 {stoch_pct:.0f}% (Ruang Naik Lebar)"
+        elif stoch_pct < 80:
+            stoch_status = f"🟡 {stoch_pct:.0f}% (Momentum Aktif)"
+        else:
+            stoch_status = f"🔶 {stoch_pct:.0f}% (Mendekati Puncak)"
+        stoch_line = f"📈 Stoch RSI: {stoch_status}\n"
+    
+    # === BADAN PESAN UTAMA ===
     message = (
-        f"{mode_icon} <b>SINYAL {mode_label.upper()} DITEMUKAN!</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"📌 Saham: <b>{ticker}</b>\n"
-        f"💰 Harga: Rp {price:,.0f}\n"
+        f"{mode_icon} <b>{mode_label}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"  🎯 <b>{ticker}</b>  ·  Rp {price:,.0f}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"\n"
-        f"🟢 Target Profit: Rp {tp:,.0f} ({tp_pct})\n" if tp else ""
-        f"🔴 Stop Loss   : Rp {sl:,.0f} ({sl_pct})\n" if sl else ""
-        f"⚖️  Risk/Reward : {rr_text}\n"
+        f"{accent} <b>RENCANA TRADING</b>\n"
+        f"  🟢 Target Profit : <b>Rp {tp:,.0f}</b>  ({tp_pct})\n"
+        f"  🔴 Stop Loss     : <b>Rp {sl:,.0f}</b>  ({sl_pct})\n"
+        f"  ⚖️  Risk / Reward : <b>{rr_text}</b>\n"
         f"\n"
-        f"📰 Sentimen Berita: {sentiment_icon} {sentiment}\n"
-        f"🏦 CMF (Bandar) : {cmf}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"<i>IDX Super Screener - Alpha Engine</i>"
+        f"📡 <b>ANALISIS MESIN</b>\n"
+        f"  💰 Tekanan Bandar : {cmf_badge} ({cmf})\n"
+        f"  📰 Sentimen Berita: {sent_badge}\n"
+        f"  {vwap_line.strip()}\n"
+        f"  {stoch_line.strip()}\n"
+        f"\n"
+        f"┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n"
+        f"{urgency}\n"
+        f"┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n"
+        f"<i>⚠️ Bukan rekomendasi investasi. Keputusan adalah tanggung jawab pribadi.</i>\n"
+        f"<i>🤖 IDX Super Screener · Titan Engine v3</i>"
     )
     
     return send_telegram_message(message)

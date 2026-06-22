@@ -152,6 +152,27 @@ def calc_obv(df: pd.DataFrame) -> pd.Series:
 
 
 # ===========================================================================
+#  HELPER: VWAP (Volume Weighted Average Price)
+# ===========================================================================
+def calc_vwap(df: pd.DataFrame) -> pd.Series:
+    """
+    Menghitung VWAP (Volume Weighted Average Price).
+    
+    Analogi: VWAP adalah 'Harga Adil' yang disepakati oleh semua pelaku pasar
+    (termasuk institusi besar) pada hari itu. 
+    - Harga di ATAS VWAP = Pasar bullish, institusi sudah masuk.
+    - Harga di BAWAH VWAP = Harga masih murah, tapi belum ada konfirmasi.
+    
+    Filter VWAP sangat ampuh memotong sinyal palsu (false breakout).
+    """
+    typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+    cumulative_tp_vol = (typical_price * df['Volume']).cumsum()
+    cumulative_vol = df['Volume'].cumsum()
+    vwap = cumulative_tp_vol / cumulative_vol
+    return vwap
+
+
+# ===========================================================================
 #  ANALISA UTAMA: MODE BENTENG (SWING/POSITIONAL)
 # ===========================================================================
 def analyze_swing_fortress(df: pd.DataFrame) -> dict:
@@ -240,18 +261,24 @@ def analyze_swing_fortress(df: pd.DataFrame) -> dict:
 # ===========================================================================
 def analyze_ninja_scalper(df: pd.DataFrame) -> dict:
     """
-    [ALPHA ENGINE v2] Menganalisa saham untuk Mode Ninja (Gorengan).
+    [ALPHA ENGINE v3 - TITAN PRECISION] Menganalisa saham untuk Mode Ninja (Gorengan).
     
-    Lapis Penyaringan:
-    1. Volume Spike (Volume > 3x rata-rata 20 candle)
-    2. VSA: Harga naik tajam (Spread > 1%)
-    3. CMF Intraday (Apakah bandar sedang masuk atau distribusi?)
-    4. S&R Terdekat untuk TP Cepat & SL Ketat
+    Lapis Penyaringan (7 Filter):
+    1. Volume Spike (Volume > 4x rata-rata 20 candle)
+    2. Wick Trap Filter (Anti-jebakan guyuran bandar)
+    3. Momentum Breakout (Tembus Harga Tertinggi 1 Jam)
+    4. CMF Intraday (Deteksi Akumulasi Diam-diam Bandar)
+    5. OBV Divergence (Konfirmasi Arah Volume)
+    6. [NEW] VWAP Filter (Harga wajib > VWAP = Konfirmasi Institusi)
+    7. [NEW] Stochastic RSI (Momentum tidak overbought = Anti-FOMO)
+    8. [NEW] Minimum Risk/Reward 1:1.5 (Disiplin Manajemen Risiko)
     """
     if len(df) < 50:
         return {"signal": False, "reason": "Data intraday tidak cukup"}
         
     df = df.copy()
+    
+    # === KALKULASI INDIKATOR ===
     
     # Volume SMA
     df['Vol_SMA20'] = df['Volume'].rolling(window=20).mean()
@@ -265,10 +292,22 @@ def analyze_ninja_scalper(df: pd.DataFrame) -> dict:
     
     # OBV Analysis
     df['OBV'] = calc_obv(df)
-    # Cek apakah OBV menanjak (tren naik) dalam 10 candle terakhir
-    # OBV Trend = SMA5 dari OBV > SMA10 dari OBV
     df['OBV_SMA5'] = df['OBV'].rolling(window=5).mean()
     df['OBV_SMA10'] = df['OBV'].rolling(window=10).mean()
+    
+    # [NEW] VWAP (Volume Weighted Average Price)
+    df['VWAP'] = calc_vwap(df)
+    
+    # [NEW] Stochastic RSI untuk filter anti-FOMO
+    try:
+        stoch_rsi = ta.momentum.StochRSIIndicator(close=df['Close'], window=14, smooth1=3, smooth2=3)
+        df['StochRSI_K'] = stoch_rsi.stochrsi_k()
+        df['StochRSI_D'] = stoch_rsi.stochrsi_d()
+        stoch_ok = True
+    except Exception:
+        df['StochRSI_K'] = 0.5
+        df['StochRSI_D'] = 0.5
+        stoch_ok = False
     
     # S&R untuk Scalping TP/SL (lebih ketat)
     sr_zones = calculate_sr_zones(df, left=3, right=3, zone_pct=0.005)
@@ -277,52 +316,87 @@ def analyze_ninja_scalper(df: pd.DataFrame) -> dict:
     curr = df.loc[last_idx]
     last_close = float(curr['Close'])
     
-    # ----------------------------------------------------
-    #  FILTER KETAT: THE SNIPER ALGORITHM
-    # ----------------------------------------------------
+    # === FILTER 7 LAPIS: THE SNIPER ALGORITHM v3 ===
     
-    # 1. Volume Spike (4x dari Rata-rata)
+    # Filter 1: Volume Spike (4x dari Rata-rata)
     vol_spike_4x = curr['Volume'] > (curr['Vol_SMA20'] * 4)
     
-    # 2. Wick Trap Filter (Ekor atas tidak boleh mendominasi badan candle)
-    # Mencegah jebakan guyuran.
+    # Filter 2: Wick Trap Filter (Ekor atas tidak boleh mendominasi badan candle)
     body = abs(curr['Close'] - curr['Open'])
     upper_wick = curr['High'] - max(curr['Close'], curr['Open'])
     no_trap = body > upper_wick
     
-    # 3. Momentum Breakout (Naik > 2% dan Tembus Harga Tertinggi 1 Jam Terakhir)
-    # 1 jam = 12 candle 5-menitan
+    # Filter 3: Momentum Breakout (Naik > 2% dan Tembus Harga Tertinggi 1 Jam Terakhir)
     price_up_2pct = curr['Spread_Pct'] > 2.0 and curr['Close'] > curr['Open']
     highest_1h = df['High'].tail(12).max()
     is_breakout = curr['Close'] >= highest_1h
     
-    # 4. Validasi Bandar: CMF Kuat (> 0.05) & OBV Trend Naik
+    # Filter 4: Validasi Bandar CMF (> 0.05 = Uang besar masuk)
     strong_money_flow = cmf > 0.05
+    
+    # Filter 5: OBV Divergence (Volume semakin kuat = Akumulasi nyata)
     obv_up = curr['OBV_SMA5'] > curr['OBV_SMA10']
     
-    # KEPUTUSAN FINAL
-    signal = bool(vol_spike_4x and no_trap and price_up_2pct and is_breakout and strong_money_flow and obv_up)
+    # Filter 6: [NEW] VWAP Filter - Harga harus berada di atas VWAP
+    # Ini memastikan kita masuk saat institusi sudah dalam posisi PROFIT
+    above_vwap = last_close > float(curr['VWAP']) if not np.isnan(curr['VWAP']) else True
     
-    # TP & SL untuk Scalper (Lebih Ketat! Scalping = TP/SL cepat)
+    # Filter 7: [NEW] Stochastic RSI Anti-FOMO
+    # Kita tidak mau beli di ujung momentum (overbought > 0.85)
+    # Kita cari yang momentum baru MULAI naik (K masih di bawah 0.85)
+    stoch_k = float(curr['StochRSI_K']) if not np.isnan(curr['StochRSI_K']) else 0.5
+    not_overbought = stoch_k < 0.85
+    
+    # === KEPUTUSAN SINYAL AWAL ===
+    raw_signal = bool(
+        vol_spike_4x and
+        no_trap and
+        price_up_2pct and
+        is_breakout and
+        strong_money_flow and
+        obv_up and
+        above_vwap and
+        not_overbought
+    )
+    
+    # === TP & SL KALKULASI ===
     tp_price = None
     sl_price = None
+    risk_reward = None
+    signal = False
     
-    if signal:
+    if raw_signal:
         if sr_zones['nearest_resistance']:
             tp_price = round(sr_zones['nearest_resistance']['center'], 0)
         else:
-            tp_price = round(last_close * 1.02, 0)  # +2% TP untuk scalping
+            tp_price = round(last_close * 1.02, 0)
             
         if sr_zones['nearest_support']:
             sl_price = round(sr_zones['nearest_support']['center'], 0)
         else:
-            sl_price = round(last_close * 0.99, 0)  # -1% SL ketat untuk scalping
+            sl_price = round(last_close * 0.99, 0)
+        
+        # Filter 8: [NEW] Minimum Risk/Reward 1:1.5 (Disiplin Wajib)
+        # Hanya masuk jika potensi untung minimal 1.5x lipat dari potensi rugi
+        if tp_price and sl_price and last_close > sl_price:
+            risk = last_close - sl_price
+            reward = tp_price - last_close
+            if risk > 0:
+                risk_reward = round(reward / risk, 2)
+                signal = risk_reward >= 1.5  # Hanya sinyal jika RR >= 1.5x
+            else:
+                signal = False
+        else:
+            signal = False
     
     return {
         "signal": signal,
         "volume_spike": bool(vol_spike_4x),
         "spread_pct": float(curr['Spread_Pct']),
         "cmf": round(cmf, 3),
+        "above_vwap": bool(above_vwap),
+        "stoch_rsi_k": round(stoch_k, 3),
+        "rr": risk_reward,
         "close": last_close,
         "tp": tp_price,
         "sl": sl_price,

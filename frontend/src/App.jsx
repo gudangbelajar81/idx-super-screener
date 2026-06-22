@@ -356,21 +356,6 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        {/* Sub Navbar untuk Menu IDX */}
-        {['swing', 'kavaleri', 'ninja'].includes(activeTab) && (
-          <div style={{ display: 'flex', gap: '10px', padding: '0 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>
-            <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px' }}>
-              Mode Benteng
-            </button>
-            <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'kavaleri' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'kavaleri' ? 'black' : 'white', borderRadius: '8px' }}>
-              Mode Kavaleri
-            </button>
-            <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'ninja' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'ninja' ? 'black' : 'white', borderRadius: '8px' }}>
-              Mode Ninja
-            </button>
-          </div>
-        )}
-
         <header className="header">
           <h1>
             {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Scanner IDX' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
@@ -455,6 +440,45 @@ function App() {
             <div style={{ width: 24, height: 24, background: 'var(--color-green)', borderRadius: '50%' }}></div>
           </div>
         </header>
+
+        {/* Master Sensus & Sub Navbar untuk Menu IDX */}
+        {['swing', 'kavaleri', 'ninja'].includes(activeTab) && (
+          <div style={{ padding: '0 24px' }}>
+            <div className="universe-builder-card" style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 12, marginBottom: 20, border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+                <div>
+                  <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Globe size={18} color="var(--color-green)" /> Sensus Saham Induk (Master Data)
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, maxWidth: 600 }}>
+                    Menyaring seluruh bursa IDX (~800 saham) menggunakan algoritma gratisan (Yahoo Finance) untuk menemukan "Kandidat Saham" potensial. Jalankan ini secara berkala sebelum menekan tombol Scan di bawah.
+                  </p>
+                </div>
+                <button 
+                  className="btn-scan" 
+                  onClick={buildUniverse} 
+                  disabled={buildingUniverse}
+                  style={{ background: 'var(--color-green)' }}
+                >
+                  {buildingUniverse ? <div className="loader"></div> : <Globe size={18} />}
+                  {buildingUniverse ? 'Sedang Sensus...' : 'Jalankan Sensus Master'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>
+              <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px' }}>
+                Mode Benteng
+              </button>
+              <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'kavaleri' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'kavaleri' ? 'black' : 'white', borderRadius: '8px' }}>
+                Mode Kavaleri
+              </button>
+              <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'ninja' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'ninja' ? 'black' : 'white', borderRadius: '8px' }}>
+                Mode Ninja
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* --- TAB HOME (COMMAND CENTER) --- */}
         {activeTab === 'home' && (
@@ -799,28 +823,6 @@ function App() {
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--color-blue)' }}>Kunci Provider (GoAPI VIP)</label>
                   <input type="password" value={goapiKey} onChange={e => setGoapiKey(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="Masukkan Kunci GoAPI" />
                 </div>
-              </div>
-            </div>
-
-            <div className="universe-builder-card" style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 12, marginBottom: 30, border: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                <div>
-                  <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Globe size={18} color="var(--color-green)" /> Sensus Saham (Universe Profiling)
-                  </h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, maxWidth: 600 }}>
-                    Mesin akan memindai seluruh saham di bursa IDX (~800 saham) untuk mengelompokkannya menjadi "Saham Normal" dan "Saham Gorengan". Lakukan ini 1 minggu sekali agar hasil "Auto-Scan Semua IDX" lebih cepat dan akurat.
-                  </p>
-                </div>
-                <button 
-                  className="btn-scan" 
-                  onClick={buildUniverse} 
-                  disabled={buildingUniverse}
-                  style={{ background: 'var(--color-green)' }}
-                >
-                  {buildingUniverse ? <div className="loader"></div> : <Globe size={18} />}
-                  {buildingUniverse ? 'Sedang Sensus...' : 'Mulai Sensus Saham'}
-                </button>
               </div>
             </div>
 

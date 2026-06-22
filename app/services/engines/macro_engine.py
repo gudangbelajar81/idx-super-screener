@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import ta
+import requests
 
 def get_macro_data() -> dict:
     """
@@ -21,9 +22,16 @@ def get_macro_data() -> dict:
         "warning": ""
     }
     
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+    })
+
     try:
         # ===== 1. IHSG (Indeks Harga Saham Gabungan) =====
-        ihsg_df = yf.download("^JKSE", period="3mo", interval="1d", progress=False)
+        ihsg_df = yf.download("^JKSE", period="3mo", interval="1d", session=session, progress=False)
         if not ihsg_df.empty:
             close = ihsg_df['Close'].squeeze()
             ema20 = ta.trend.ema_indicator(close, window=20)
@@ -55,7 +63,7 @@ def get_macro_data() -> dict:
     
     try:
         # ===== 2. USD/IDR (Kekuatan Rupiah) =====
-        fx_df = yf.download("USDIDR=X", period="1mo", interval="1d", progress=False)
+        fx_df = yf.download("USDIDR=X", period="1mo", interval="1d", session=session, progress=False)
         if not fx_df.empty:
             fx_close = fx_df['Close'].squeeze()
             last_fx = float(fx_close.iloc[-1])
@@ -84,7 +92,7 @@ def get_macro_data() -> dict:
     
     try:
         # ===== 3. Batu Bara (Penting untuk saham energi IDX) =====
-        coal_df = yf.download("MTF=F", period="1mo", interval="1d", progress=False)
+        coal_df = yf.download("MTF=F", period="1mo", interval="1d", session=session, progress=False)
         if not coal_df.empty and len(coal_df) > 5:
             coal_close = coal_df['Close'].squeeze()
             last_coal = float(coal_close.iloc[-1])
@@ -102,7 +110,7 @@ def get_macro_data() -> dict:
     
     try:
         # ===== 4. Emas (Safe Haven indicator) =====
-        gold_df = yf.download("GC=F", period="1mo", interval="1d", progress=False)
+        gold_df = yf.download("GC=F", period="1mo", interval="1d", session=session, progress=False)
         if not gold_df.empty and len(gold_df) > 5:
             gold_close = gold_df['Close'].squeeze()
             last_gold = float(gold_close.iloc[-1])

@@ -15,7 +15,13 @@ def reliable_get(url, headers, timeout):
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def reliable_yf_download(ticker, period, interval="1d", threads=False):
-    df = yf.download(ticker, period=period, interval=interval, threads=threads, progress=False)
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+    })
+    df = yf.download(ticker, period=period, interval=interval, threads=threads, session=session, progress=False)
     if df is None or df.empty:
         raise ValueError(f"Empty data from Yahoo Finance for {ticker}")
     return df

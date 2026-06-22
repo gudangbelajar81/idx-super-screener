@@ -587,12 +587,12 @@ def get_portfolio():
     return {"data": data}
 
 @router.post("/api/universe/build")
-def build_idx_universe(background_tasks: BackgroundTasks):
+def build_idx_universe(background_tasks: BackgroundTasks, x_goapi_key: str = Header(None)):
     """Endpoint untuk memulai sensus seluruh saham IDX di belakang layar"""
-    from app.services.engines.universe_engine import set_status
+    from app.services.engines.universe_engine import set_status, build_universe
     # Reset status sebelum mulai
     set_status("starting", 0, "Mempersiapkan Sensus...")
-    background_tasks.add_task(build_universe)
+    background_tasks.add_task(build_universe, x_goapi_key)
     return {"message": "Sensus Master dimulai di belakang layar.", "status": "processing"}
 
 @router.get("/api/universe/status")

@@ -3,6 +3,7 @@ import pandas as pd
 import pymysql
 import numpy as np
 import os
+import requests
 
 from app.core.config import MIN_DAILY_VOLUME
 from app.core.idx_tickers import get_all_idx_tickers
@@ -51,15 +52,15 @@ def get_db_connection():
             cursorclass=pymysql.cursors.DictCursor
         )
 
-def build_universe():
+def build_universe(goapi_key: str = None):
     """
     Menjalankan sensus saham secara Background Task:
-    - Batching per 50 saham.
-    - Menyimpan status ke sensus_status.json.
+    - Menggunakan GoAPI jika goapi_key disediakan (Bypass blokir Yahoo)
+    - Fallback ke Yahoo Finance jika gagal
     """
     tickers = get_all_idx_tickers()
     total_tickers = len(tickers)
-    print(f"[Universe Builder] Memulai sensus untuk {total_tickers} saham...")
+    print(f"[Universe Builder] Memulai sensus untuk {total_tickers} saham (GoAPI Key terdeteksi: {bool(goapi_key)})...")
     
     set_status("running", 0, f"Memulai sensus {total_tickers} saham...")
     
@@ -74,65 +75,100 @@ def build_universe():
         set_status("running", int((i / total_tickers) * 100), f"Memproses batch {batch_num}/{total_batches} ({len(chunk)} saham)")
         print(f"[Universe Builder] Mendownload batch {batch_num}/{total_batches}...")
         
-        try:
-            session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5'
-            })
-            data = yf.download(chunk, period="1mo", threads=True, progress=False, session=session)
-            
-            for ticker in chunk:
-                try:
-                    if len(chunk) == 1:
-                        df = data.ffill().fillna(0)
-                        df = df[df['Close'] > 0]
-                    else:
-                        if isinstance(data.columns, pd.MultiIndex):
-                            df = pd.DataFrame({
-                                'Close': data['Close'][ticker],
-                                'Volume': data['Volume'][ticker],
-                                'High': data['High'][ticker],
-                                'Low': data['Low'][ticker]
-                            }).ffill().fillna(0)
+        goapi_success = False
+        if goapi_key:
+            try:
+                symbols = ",".join([t.replace(".JK", "") for t in chunk])
+                url = f"https://api.goapi.io/stock/idx/prices?symbols={symbols}"
+                headers = {"X-API-KEY": goapi_key, "Accept": "application/json"}
+                res = requests.get(url, headers=headers, timeout=15)
+                if res.status_code == 200:
+                    data = res.json().get("data", {}).get("results", [])
+                    if data:
+                        goapi_success = True
+                        for rt in data:
+                            ticker = rt.get("symbol") + ".JK"
+                            close_price = float(rt.get("close", 0))
+                            volume = float(rt.get("volume", 0))
+                            change_percent = float(rt.get("percent", 0))
+                            
+                            avg_value = close_price * volume
+                            avg_volatility = abs(change_percent) / 100.0  # Konversi percent ke desimal
+                            
+                            if avg_value < MIN_DAILY_VOLUME or close_price == 0:
+                                category = "SAMPAH"
+                            else:
+                                if avg_volatility > VOLATILITY_THRESHOLD:
+                                    category = "NINJA"
+                                elif avg_value >= 15_000_000_000:
+                                    category = "KAVALERI"
+                                else:
+                                    category = "SWING"
+                                    
+                            results.append((ticker, category, avg_value, avg_volatility))
+            except Exception as e:
+                print(f"[Universe Builder] GoAPI Error: {e}")
+
+        # Fallback ke Yahoo Finance jika GoAPI gagal atau tidak ada key
+        if not goapi_success:
+            print(f"[Universe Builder] Fallback ke Yahoo Finance untuk batch {batch_num}...")
+            try:
+                session = requests.Session()
+                session.headers.update({
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5'
+                })
+                data = yf.download(chunk, period="1mo", threads=True, progress=False, session=session)
+                
+                for ticker in chunk:
+                    try:
+                        if len(chunk) == 1:
+                            df = data.ffill().fillna(0)
                             df = df[df['Close'] > 0]
                         else:
-                            df = pd.DataFrame()
-                    
-                    if df.empty or len(df) < 10:
-                        results.append((ticker, "SAMPAH", 0, 0))
-                        continue
+                            if isinstance(data.columns, pd.MultiIndex):
+                                df = pd.DataFrame({
+                                    'Close': data['Close'][ticker],
+                                    'Volume': data['Volume'][ticker],
+                                    'High': data['High'][ticker],
+                                    'Low': data['Low'][ticker]
+                                }).ffill().fillna(0)
+                                df = df[df['Close'] > 0]
+                            else:
+                                df = pd.DataFrame()
                         
-                    df['Value'] = df['Close'] * df['Volume']
-                    avg_value = df['Value'].tail(20).mean()
-                    
-                    # Handle division by zero on Low
-                    df['Range'] = np.where(df['Low'] > 0, (df['High'] - df['Low']) / df['Low'], 0)
-                    avg_volatility = df['Range'].tail(20).mean()
-                    
-                    # Cegah NaN atau Infinity crash saat Insert Database
-                    avg_value = float(avg_value) if np.isfinite(avg_value) else 0.0
-                    avg_volatility = float(avg_volatility) if np.isfinite(avg_volatility) else 0.0
-                    
-                    if avg_value < MIN_DAILY_VOLUME:
-                        category = "SAMPAH"
-                    else:
-                        if avg_volatility > VOLATILITY_THRESHOLD:
-                            category = "NINJA"
-                        elif avg_value >= 15_000_000_000:
-                            category = "KAVALERI"
-                        else:
-                            category = "SWING"
+                        if df.empty or len(df) < 10:
+                            results.append((ticker, "SAMPAH", 0, 0))
+                            continue
                             
-                    results.append((ticker, category, avg_value, avg_volatility))
-                except Exception as e:
-                    print(f"Error proses {ticker}: {e}")
+                        df['Value'] = df['Close'] * df['Volume']
+                        avg_value = df['Value'].tail(20).mean()
+                        
+                        df['Range'] = np.where(df['Low'] > 0, (df['High'] - df['Low']) / df['Low'], 0)
+                        avg_volatility = df['Range'].tail(20).mean()
+                        
+                        avg_value = float(avg_value) if np.isfinite(avg_value) else 0.0
+                        avg_volatility = float(avg_volatility) if np.isfinite(avg_volatility) else 0.0
+                        
+                        if avg_value < MIN_DAILY_VOLUME:
+                            category = "SAMPAH"
+                        else:
+                            if avg_volatility > VOLATILITY_THRESHOLD:
+                                category = "NINJA"
+                            elif avg_value >= 15_000_000_000:
+                                category = "KAVALERI"
+                            else:
+                                category = "SWING"
+                                
+                        results.append((ticker, category, avg_value, avg_volatility))
+                    except Exception as e:
+                        print(f"Error proses {ticker}: {e}")
+                        results.append((ticker, "SAMPAH", 0.0, 0.0))
+            except Exception as e:
+                print(f"[Universe Builder] Batch {batch_num} gagal didownload: {e}")
+                for ticker in chunk:
                     results.append((ticker, "SAMPAH", 0.0, 0.0))
-        except Exception as e:
-            print(f"[Universe Builder] Batch {batch_num} gagal didownload: {e}")
-            for ticker in chunk:
-                results.append((ticker, "SAMPAH", 0.0, 0.0))
 
     # Simpan ke Database
     set_status("running", 95, "Menyimpan hasil ke database...")

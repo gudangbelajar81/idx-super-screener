@@ -806,6 +806,66 @@ def scan_all_ninja():
     return {"data": results}
 
 
+@app.get("/api/init-db")
+def init_db_endpoint():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Tabel idx_universe
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS idx_universe (
+                    ticker VARCHAR(20) PRIMARY KEY,
+                    category VARCHAR(20),
+                    avg_value DOUBLE,
+                    volatility DOUBLE,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabel watchlists
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS watchlists (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    ticker VARCHAR(20) NOT NULL UNIQUE,
+                    mode VARCHAR(20) NOT NULL
+                )
+            """)
+            
+            # Tabel paper_trades
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS paper_trades (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    ticker VARCHAR(20),
+                    mode VARCHAR(20),
+                    entry_price DOUBLE,
+                    tp DOUBLE,
+                    sl DOUBLE,
+                    status VARCHAR(20) DEFAULT 'OPEN',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    closed_at TIMESTAMP NULL,
+                    pnl_pct DOUBLE NULL
+                )
+            """)
+            
+            # Seed awal watchlists jika kosong
+            cursor.execute("SELECT COUNT(*) FROM watchlists")
+            if cursor.fetchone()['COUNT(*)'] == 0:
+                initial_data = [
+                    ("BBCA.JK", "swing"), ("BBRI.JK", "swing"), ("BMRI.JK", "swing"), ("BBNI.JK", "swing"),
+                    ("TLKM.JK", "swing"), ("ASII.JK", "swing"), ("UNVR.JK", "swing"), ("ICBP.JK", "swing"),
+                    ("CUAN.JK", "ninja"), ("PANI.JK", "ninja"), ("BREN.JK", "ninja"), ("GOTO.JK", "ninja")
+                ]
+                cursor.executemany("INSERT INTO watchlists (ticker, mode) VALUES (%s, %s)", initial_data)
+                
+        conn.commit()
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
+    
+    return {"status": "success", "message": "Database tables created and seeded successfully!"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

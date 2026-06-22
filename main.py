@@ -15,8 +15,11 @@ app.add_middleware(
 
 app.include_router(router)
 
+from app.core.db_setup import setup_database
+
 @app.on_event("startup")
 def startup_event():
+    setup_database()
     start_scheduler()
 
 @app.on_event("shutdown")

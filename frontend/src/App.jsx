@@ -632,13 +632,7 @@ function App() {
 
             {/* Results Container */}
             <div className="results-container">
-              <div className="scanner-header">
-                <div>
-                  <h2 style={{fontSize: '24px', margin: 0}}>{activeTab === 'swing' ? 'Alpha Engine v2' : activeTab === 'kavaleri' ? 'The Detonator Engine' : activeTab === 'whale' ? 'Whale Tracker v1' : 'Live Market Scanner'}</h2>
-                  {activeTab === 'whale' && (
-                    <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)' }}>Otomatis memindai Broker Asing / Paus pada Watchlist</p>
-                  )}
-                </div>
+              <div className="scanner-header" style={{ justifyContent: 'flex-end' }}>
                 <div style={{display:'flex', gap:'10px'}}>
                   <button className="btn-scan" onClick={handleScan} disabled={loading} style={{background: 'var(--color-green)', color: 'black'}}>
                     {loading ? <div className="loader"></div> : <Search size={18} />}

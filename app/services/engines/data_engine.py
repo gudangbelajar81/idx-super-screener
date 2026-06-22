@@ -26,116 +26,85 @@ def reliable_yf_download(ticker, period, interval="1d", threads=False):
         raise ValueError(f"Empty data from Yahoo Finance for {ticker}")
     return df
 
-# ===========================================================================
-#  FREE MODE: Yahoo Finance (Gratis, delay ~15 menit - untuk Testing)
-# ===========================================================================
-def _download_daily_free(tickers: list, period: str = "1y") -> Dict[str, pd.DataFrame]:
-    """
-    Mode Gratis: Mengunduh data harian via Yahoo Finance.
-    Tidak memotong token API GoAPI. Cocok untuk testing & pengembangan.
-    """
-    print(f"[Data Engine - FREE/Yahoo] Mengunduh data Harian untuk {len(tickers)} saham...")
+from cachetools import TTLCache, cached
+
+# Cache untuk menyimpan hasil history Yahoo Finance selama 15 menit
+yf_history_cache = TTLCache(maxsize=20, ttl=900)
+
+@cached(cache=yf_history_cache)
+def _get_bulk_yf_history(tickers_tuple, period, interval):
+    tickers = list(tickers_tuple)
+    print(f"[Bulk Fetch] Mendownload history {len(tickers)} saham (period={period}, interval={interval}) via Yahoo...")
+    try:
+        data = yf.download(tickers, period=period, interval=interval, threads=True, progress=False)
+    except Exception as e:
+        print(f"Gagal bulk download YF: {e}")
+        return {}
+        
     data_dict = {}
     for ticker in tickers:
         try:
-            df = reliable_yf_download(ticker, period=period, interval="1d")
+            if len(tickers) == 1:
+                df = data.dropna()
+            else:
+                df = pd.DataFrame({
+                    'Open': data['Open'][ticker],
+                    'High': data['High'][ticker],
+                    'Low': data['Low'][ticker],
+                    'Close': data['Close'][ticker],
+                    'Volume': data['Volume'][ticker]
+                }).dropna()
             if not df.empty:
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
                 data_dict[ticker] = df
-        except Exception as e:
-            print(f"[FREE] Gagal mengunduh {ticker}: {e}")
+        except Exception:
+            pass
     return data_dict
 
-def _download_intraday_free(tickers: list, interval: str = "5m", period: str = "5d") -> Dict[str, pd.DataFrame]:
-    """
-    Mode Gratis: Data intraday via Yahoo Finance saja. Tanpa harga real-time GoAPI.
-    """
-    print(f"[Data Engine - FREE/Yahoo] Mengunduh data Intraday {interval} untuk {len(tickers)} saham...")
-    data_dict = {}
-    for ticker in tickers:
+def _apply_goapi_bulk_prices(data_dict, goapi_key):
+    tickers = list(data_dict.keys())
+    chunk_size = 50
+    print(f"[Bulk API] Menarik harga Real-Time untuk {len(tickers)} saham dari GoAPI...")
+    
+    for i in range(0, len(tickers), chunk_size):
+        chunk = tickers[i:i + chunk_size]
+        symbols = ",".join([t.replace(".JK", "") for t in chunk])
+        url = f"https://api.goapi.io/stock/idx/prices?symbols={symbols}"
+        headers = {"X-API-KEY": goapi_key, "Accept": "application/json"} if goapi_key else {"Accept": "application/json"}
+        
         try:
-            df = reliable_yf_download(ticker, period=period, interval=interval)
-            if not df.empty:
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
-                data_dict[ticker] = df
-        except Exception as e:
-            print(f"[FREE] Gagal mengunduh Intraday {ticker}: {e}")
-    return data_dict
-
-# ===========================================================================
-#  PREMIUM MODE: GoAPI VIP (Berbayar, data terkini - untuk Live Trading)
-# ===========================================================================
-def _download_daily_premium(tickers: list, period: str = "1y", goapi_key: str = None) -> Dict[str, pd.DataFrame]:
-    """
-    Mode Premium (VIP GoAPI): Mengunduh data harian terkini untuk saham IDX.
-    MEMOTONG TOKEN API. Gunakan saat siap Live Trading.
-    """
-    print(f"[Data Engine - PREMIUM/GoAPI] Mengunduh data Harian untuk {len(tickers)} saham...")
-    data_dict = {}
-    for ticker in tickers:
-        clean_ticker = ticker.replace(".JK", "") # GoAPI tidak pakai .JK
-        try:
-            url = f"https://api.goapi.io/stock/idx/{clean_ticker}/historical"
-            headers = {"X-API-KEY": goapi_key, "Accept": "application/json"} if goapi_key else {"Accept": "application/json"}
             res = reliable_get(url, headers=headers, timeout=10)
             if res.status_code == 200:
-                data = res.json()
-                if "data" in data and "results" in data["data"]:
-                    df = pd.DataFrame(data["data"]["results"])
-                    if not df.empty:
-                        df['date'] = pd.to_datetime(df['date'])
-                        df.set_index('date', inplace=True)
-                        df.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
-                        df = df.sort_index()
-                        data_dict[ticker] = df
-            else:
-                print(f"GoAPI Error {clean_ticker}: {res.status_code}")
-        except Exception as e:
-            print(f"[PREMIUM] Gagal mengunduh {ticker}: {e}")
-    return data_dict
-
-def _download_intraday_premium(tickers: list, interval: str = "5m", period: str = "5d", goapi_key: str = None) -> Dict[str, pd.DataFrame]:
-    """
-    Mode Premium: Yahoo Finance history + Real-Time price dari GoAPI.
-    MEMOTONG TOKEN API.
-    """
-    print(f"[Data Engine - PREMIUM/Hybrid] Mengunduh data Intraday {interval} untuk {len(tickers)} saham...")
-    data_dict = {}
-    for ticker in tickers:
-        try:
-            # 1. Ambil history base dari Yahoo
-            try:
-                df = reliable_yf_download(ticker, period=period, interval=interval)
-            except Exception:
-                df = pd.DataFrame()
-                
-            if not df.empty:
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
-                
-                # 2. Ambil harga absolut detik ini dari GoAPI (ini yang potong token)
-                clean_ticker = ticker.replace(".JK", "")
-                url = f"https://api.goapi.io/stock/idx/prices?symbols={clean_ticker}"
-                headers = {"X-API-KEY": goapi_key, "Accept": "application/json"} if goapi_key else {"Accept": "application/json"}
-                try:
-                    res = reliable_get(url, headers=headers, timeout=5)
-                except Exception:
-                    res = None
-                    
-                if res and res.status_code == 200:
-                    realtime_data = res.json()
-                    if "data" in realtime_data and "results" in realtime_data["data"]:
-                        rt = realtime_data["data"]["results"][0]
-                        # Update candle terakhir dengan harga real-time
+                results = res.json().get("data", {}).get("results", [])
+                for rt in results:
+                    clean_ticker = rt.get("symbol")
+                    ticker = clean_ticker + ".JK"
+                    if ticker in data_dict:
+                        df = data_dict[ticker]
                         df.iloc[-1, df.columns.get_loc('Close')] = float(rt.get('close', df.iloc[-1]['Close']))
                         df.iloc[-1, df.columns.get_loc('Volume')] = float(rt.get('volume', df.iloc[-1]['Volume']))
-                
-                data_dict[ticker] = df
         except Exception as e:
-            print(f"[PREMIUM] Gagal mengunduh Intraday {ticker}: {e}")
+            print(f"GoAPI Bulk Error chunk {i}: {e}")
     return data_dict
+
+# ===========================================================================
+#  FREE MODE: Yahoo Finance (Gratis, delay ~15 menit)
+# ===========================================================================
+def _download_daily_free(tickers: list, period: str = "1y") -> Dict[str, pd.DataFrame]:
+    return _get_bulk_yf_history(tuple(sorted(tickers)), period, "1d")
+
+def _download_intraday_free(tickers: list, interval: str = "5m", period: str = "5d") -> Dict[str, pd.DataFrame]:
+    return _get_bulk_yf_history(tuple(sorted(tickers)), period, interval)
+
+# ===========================================================================
+#  PREMIUM MODE: Bulk Hybrid (YF History + GoAPI Realtime Bulk)
+# ===========================================================================
+def _download_daily_premium(tickers: list, period: str = "1y", goapi_key: str = None) -> Dict[str, pd.DataFrame]:
+    data_dict = _get_bulk_yf_history(tuple(sorted(tickers)), period, "1d")
+    return _apply_goapi_bulk_prices(data_dict.copy(), goapi_key)
+
+def _download_intraday_premium(tickers: list, interval: str = "5m", period: str = "5d", goapi_key: str = None) -> Dict[str, pd.DataFrame]:
+    data_dict = _get_bulk_yf_history(tuple(sorted(tickers)), period, interval)
+    return _apply_goapi_bulk_prices(data_dict.copy(), goapi_key)
 
 # ===========================================================================
 #  GATEWAY UTAMA: Fungsi Publik dengan Saklar use_premium

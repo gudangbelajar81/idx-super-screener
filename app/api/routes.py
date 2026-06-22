@@ -227,68 +227,45 @@ def scan_swing(premium: bool = True, x_goapi_key: str = Header(None)):
             swing_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()
-        
+            
     if not swing_universe:
         return {"data": []}
 
     daily_data = download_daily_data(swing_universe, period="1y", use_premium=premium, goapi_key=x_goapi_key)
-    results = []
     
-    for ticker, df in daily_data.items():
-        if df.empty:
-            continue
-            
+    def process_swing(args):
+        ticker, df = args
+        if df.empty: return None
         avg_volume = df['Volume'].tail(20).mean()
         last_close = df['Close'].iloc[-1]
         avg_value = avg_volume * last_close
         
-        item = {
-            "ticker": ticker.replace(".JK", ""),
-            "price": float(last_close),
-            "liquidity": float(avg_value),
-            "signal": False,
-            "status": "Aman",
-            "reason": ""
-        }
-        
+        item = {"ticker": ticker.replace(".JK", ""), "price": float(last_close), "liquidity": float(avg_value), "signal": False, "status": "Aman", "reason": ""}
         if avg_value < MIN_DAILY_VOLUME:
-            item["status"] = "Ditolak"
-            item["reason"] = f"Likuiditas Rendah"
-            results.append(item)
-            continue
+            item["status"], item["reason"] = "Ditolak", "Likuiditas Rendah"
+            return item
             
         analysis = analyze_swing_fortress(df)
-        item["signal"] = analysis.get("signal", False)
-        item["cmf"] = analysis.get("cmf", 0)
-        item["tp"] = analysis.get("tp")
-        item["sl"] = analysis.get("sl")
-        item["rr"] = analysis.get("rr")
+        item.update({"signal": analysis.get("signal", False), "cmf": analysis.get("cmf", 0), "tp": analysis.get("tp"), "sl": analysis.get("sl"), "rr": analysis.get("rr")})
         
         if item["signal"]:
             item["status"] = "KANDIDAT"
             rr_text = f" | R:R {item['rr']}x" if item['rr'] else ""
             item["reason"] = f"Uptrend + ZLSMA + CMF:{item['cmf']}{rr_text}"
-            
-            # Ambil sentimen berita untuk kandidat saja (hemat waktu)
             news = get_news_sentiment(ticker)
-            item["sentiment"] = news.get("sentiment", "NETRAL")
-            item["news_count"] = news.get("news_count", 0)
-            
-            # Jika sentimen sangat negatif, ubah status jadi HATI-HATI
-            if "NEGATIF" in item["sentiment"]:
-                item["status"] = "HATI-HATI"
-            
-            # Kirim notifikasi Telegram
+            item["sentiment"], item["news_count"] = news.get("sentiment", "NETRAL"), news.get("news_count", 0)
+            if "NEGATIF" in item["sentiment"]: item["status"] = "HATI-HATI"
             notify_signal(item, mode="swing")
-            
-            # Auto beli di Portofolio Robot
             if item.get("tp") and item.get("sl"):
                 record_paper_trade(item["ticker"], item["price"], item["tp"], item["sl"])
         else:
-            item["reason"] = "Belum memenuhi semua syarat masuk"
-            item["sentiment"] = "NETRAL"
-            
-        results.append(item)
+            item["reason"] = "Belum ada sinyal valid"
+            item["status"] = "Pantau"
+        return item
+        
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(filter(None, executor.map(process_swing, daily_data.items())))
         
     return {"data": results}
 
@@ -309,24 +286,16 @@ def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
     yfinance_tickers = [t if t.endswith(".JK") else f"{t}.JK" for t in tickers]
     data_dict = download_daily_data(yfinance_tickers, period="6mo", use_premium=premium, goapi_key=x_goapi_key)
     
-    results = []
-    for t_raw, df in data_dict.items():
-        if df.empty: continue
+    def process_kavaleri(args):
+        t_raw, df = args
+        if df.empty: return None
         t_clean = t_raw.replace(".JK", "")
-        
         analysis = analyze_cavalry_fast_swing(df)
-        # Jika sinyal menyala, kirim notifikasi
+        
         item = {
-            "ticker": t_clean,
-            "price": analysis.get("close", 0),
-            "signal": analysis.get("signal", False),
-            "status": "Aman",
-            "reason": "",
-            "tp": analysis.get("tp"),
-            "sl": analysis.get("sl"),
-            "rr": analysis.get("rr"),
-            "squeeze_fired": analysis.get("squeeze_fired", False),
-            "smc_trap": analysis.get("smc_trap", False)
+            "ticker": t_clean, "price": analysis.get("close", 0), "signal": analysis.get("signal", False),
+            "status": "Aman", "reason": "", "tp": analysis.get("tp"), "sl": analysis.get("sl"), "rr": analysis.get("rr"),
+            "squeeze_fired": analysis.get("squeeze_fired", False), "smc_trap": analysis.get("smc_trap", False)
         }
         
         if item["signal"]:
@@ -337,21 +306,20 @@ def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
             item["reason"] = " + ".join(reasons) if reasons else "Momentum + Bandar Masuk"
             
             pesan = f"🐎 KAVALERI TRIGGER: {t_clean}\\nHarga: {item['price']}\\n"
-            if item['squeeze_fired']:
-                pesan += "💥 TTM SQUEEZE FIRED! (Energi Meledak)\\n"
-            if item['smc_trap']:
-                pesan += "🏦 SMC LIQUIDITY TRAP! (Bandar Makan Ritel)\\n"
+            if item['squeeze_fired']: pesan += "💥 TTM SQUEEZE FIRED! (Energi Meledak)\\n"
+            if item['smc_trap']: pesan += "🏦 SMC LIQUIDITY TRAP! (Bandar Makan Ritel)\\n"
             pesan += f"TP: {item['tp']} | SL: {item['sl']}"
-            notify_signal(item, mode="kavaleri") # mock item to pass dict
+            notify_signal(item, mode="kavaleri")
             
-            # Auto beli di Portofolio Robot
             if item.get("tp") and item.get("sl"):
                 record_paper_trade(item["ticker"], item["price"], item["tp"], item["sl"])
         else:
-            item["reason"] = "Menunggu Squeeze / Trap"
-            item["status"] = "Pantau"
-            
-        results.append(item)
+            item["reason"], item["status"] = "Menunggu Squeeze / Trap", "Pantau"
+        return item
+
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(filter(None, executor.map(process_kavaleri, data_dict.items())))
         
     return {"data": results}
 
@@ -376,48 +344,31 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
     # Ninja gunakan data harian (intraday 5m Yahoo IDX sangat tidak stabil)
     # Data 3 bulan cukup untuk analisa volume spike & scalp
     daily_data = download_daily_data(scalp_universe, period="3mo", use_premium=premium, goapi_key=x_goapi_key)
-    results = []
     
-    for ticker, df in daily_data.items():
-        if df is None or df.empty or len(df) < 20:
-            continue
-        
+    def process_ninja(args):
+        ticker, df = args
+        if df is None or df.empty or len(df) < 20: return None
         try:
             last_close = float(df['Close'].iloc[-1])
-            
-            item = {
-                "ticker": ticker.replace(".JK", ""),
-                "price": last_close,
-                "signal": False,
-                "status": "Sepi",
-                "reason": ""
-            }
-            
-            # Hitung Volume Spike: volume hari ini vs rata-rata 20 hari
+            item = {"ticker": ticker.replace(".JK", ""), "price": last_close, "signal": False, "status": "Sepi", "reason": ""}
             avg_vol = df['Volume'].tail(20).mean()
             last_vol = df['Volume'].iloc[-1]
             prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else last_close
             
-            vol_spike = last_vol > (avg_vol * 2.0)  # Volume 2x rata-rata
-            price_up = last_close > prev_close       # Harga naik
-            
-            # Hitung persentase kenaikan harga
+            vol_spike = last_vol > (avg_vol * 2.0)
+            price_up = last_close > prev_close
             spread_pct = ((last_close - prev_close) / prev_close * 100) if prev_close > 0 else 0
             
-            # Hitung CMF (Chaikin Money Flow) sederhana
             try:
                 from app.services.engines.technical_engine import calc_chaikin_money_flow
                 cmf = calc_chaikin_money_flow(df, period=14)
-                strong_flow = cmf > 0.05
             except Exception:
                 cmf = 0
-                strong_flow = vol_spike and price_up
             
             signal = vol_spike and price_up and spread_pct > 1.5
             
             if signal:
-                item["signal"] = True
-                item["status"] = "HAKA"
+                item["signal"], item["status"] = True, "HAKA"
                 item["reason"] = f"Volume Spike {last_vol/avg_vol:.1f}x | Naik +{spread_pct:.1f}% | CMF:{round(cmf,3)}"
                 item["tp"] = round(last_close * 1.05, 0)
                 item["sl"] = round(last_close * 0.97, 0)
@@ -428,13 +379,15 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
                 item["status"] = "Waspada"
                 item["reason"] = f"Volume Spike {last_vol/avg_vol:.1f}x tapi harga stagnan"
             else:
-                item["reason"] = f"Volume normal. Naik {spread_pct:.1f}%"
-            
-            results.append(item)
-            
+                item["reason"] = "Belum ada Spike"
+            return item
         except Exception as e:
-            print(f"[Ninja Scan] Error pada {ticker}: {e}")
-            continue
+            print(f"Error Ninja {ticker}: {e}")
+            return None
+
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(filter(None, executor.map(process_ninja, daily_data.items())))
         
     return {"data": results}
 

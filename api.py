@@ -123,16 +123,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from urllib.parse import urlparse
+
 # Database Connection Helper (Support Railway & Local)
 def get_db_connection():
-    return pymysql.connect(
-        host=os.environ.get("MYSQLHOST", "localhost"),
-        user=os.environ.get("MYSQLUSER", "root"),
-        password=os.environ.get("MYSQLPASSWORD", ""),
-        database=os.environ.get("MYSQLDATABASE", "idx_screener"),
-        port=int(os.environ.get("MYSQLPORT", 3306)),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    db_url = os.environ.get("MYSQL_URL")
+    if db_url:
+        parsed = urlparse(db_url)
+        return pymysql.connect(
+            host=parsed.hostname,
+            user=parsed.username,
+            password=parsed.password,
+            database=parsed.path[1:], # hapus slash di awal
+            port=parsed.port or 3306,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    else:
+        return pymysql.connect(
+            host=os.environ.get("MYSQLHOST", "localhost"),
+            user=os.environ.get("MYSQLUSER", "root"),
+            password=os.environ.get("MYSQLPASSWORD") or os.environ.get("MYSQL_PASSWORD", ""),
+            database=os.environ.get("MYSQLDATABASE", "idx_screener"),
+            port=int(os.environ.get("MYSQLPORT", 3306)),
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
 class WatchlistItem(BaseModel):
     ticker: str

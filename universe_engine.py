@@ -10,15 +10,29 @@ from idx_tickers import get_all_idx_tickers
 # Nilai batas volatilitas (misal rata-rata pergerakan harian > 4% = Gorengan)
 VOLATILITY_THRESHOLD = 0.04
 
+from urllib.parse import urlparse
+
 def get_db_connection():
-    return pymysql.connect(
-        host=os.environ.get("MYSQLHOST", "localhost"),
-        user=os.environ.get("MYSQLUSER", "root"),
-        password=os.environ.get("MYSQLPASSWORD", ""),
-        database=os.environ.get("MYSQLDATABASE", "idx_screener"),
-        port=int(os.environ.get("MYSQLPORT", 3306)),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    db_url = os.environ.get("MYSQL_URL")
+    if db_url:
+        parsed = urlparse(db_url)
+        return pymysql.connect(
+            host=parsed.hostname,
+            user=parsed.username,
+            password=parsed.password,
+            database=parsed.path[1:],
+            port=parsed.port or 3306,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    else:
+        return pymysql.connect(
+            host=os.environ.get("MYSQLHOST", "localhost"),
+            user=os.environ.get("MYSQLUSER", "root"),
+            password=os.environ.get("MYSQLPASSWORD") or os.environ.get("MYSQL_PASSWORD", ""),
+            database=os.environ.get("MYSQLDATABASE", "idx_screener"),
+            port=int(os.environ.get("MYSQLPORT", 3306)),
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
 def build_universe():
     """

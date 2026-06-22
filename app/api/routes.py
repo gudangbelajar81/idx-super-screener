@@ -186,7 +186,7 @@ def get_candidates(mode: str):
     try:
         with conn.cursor() as cursor:
             order_by = "avg_value DESC" if category != "NINJA" else "volatility DESC"
-            cursor.execute(f"SELECT ticker, avg_value FROM idx_universe WHERE category=%s ORDER BY {order_by} LIMIT 50", (category,))
+            cursor.execute(f"SELECT ticker, avg_value FROM idx_universe WHERE category=%s ORDER BY {order_by}", (category,))
             rows = cursor.fetchall()
             
             # Jika database kosong, gunakan fallback hardcoded
@@ -223,7 +223,7 @@ def scan_swing(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM idx_universe WHERE category='SWING' ORDER BY avg_value DESC LIMIT 50")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='SWING' ORDER BY avg_value DESC")
             swing_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()
@@ -298,7 +298,7 @@ def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM idx_universe WHERE category='KAVALERI' ORDER BY avg_value DESC LIMIT 50")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='KAVALERI' ORDER BY avg_value DESC")
             tickers = [row["ticker"] for row in cursor.fetchall()]
     finally:
         conn.close()
@@ -360,7 +360,7 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM idx_universe WHERE category='NINJA' ORDER BY volatility DESC LIMIT 50")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='NINJA' ORDER BY volatility DESC")
             scalp_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()

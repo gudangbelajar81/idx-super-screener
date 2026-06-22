@@ -2,8 +2,8 @@
 
 :root {
   --bg-dark: #0f1015;
-  --bg-card: #1a1c23;
-  --bg-card-hover: #22252e;
+  --bg-card: rgba(26, 28, 35, 0.4);
+  --bg-card-hover: rgba(34, 37, 46, 0.6);
   --text-main: #ffffff;
   --text-muted: #8b92a5;
   
@@ -39,8 +39,10 @@ body {
 
 .sidebar {
   width: 260px;
-  background-color: #15161c;
-  border-right: 1px solid var(--border-subtle);
+  background-color: rgba(21, 22, 28, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   padding: 20px 0;
   display: flex;
   flex-direction: column;
@@ -114,19 +116,23 @@ body {
 
 .stat-card {
   background-color: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
   padding: 24px;
   display: flex;
   align-items: center;
   gap: 20px;
-  border: 1px solid var(--border-subtle);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 230, 118, 0.15);
   background-color: var(--bg-card-hover);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .stat-icon {
@@ -158,9 +164,12 @@ body {
 /* Results Section */
 .results-container {
   background-color: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
   padding: 24px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   margin-bottom: 30px;
 }
 
@@ -180,13 +189,18 @@ body {
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 8px;
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
 }
 
-.btn-scan:hover { opacity: 0.9; }
+.btn-scan:hover { 
+  opacity: 1;
+  box-shadow: 0 0 25px rgba(0, 230, 118, 0.6);
+  transform: scale(1.02);
+}
 .btn-scan:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .stock-grid {

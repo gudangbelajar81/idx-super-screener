@@ -903,6 +903,35 @@ def debug_universe():
         if conn:
             conn.close()
 
+@app.get("/api/emergency-seed")
+def emergency_seed():
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            # Masukkan 20 saham Ninja manual
+            ninja_stocks = ["PANI.JK", "CUAN.JK", "BREN.JK", "GOTO.JK", "BRMS.JK", "BUMI.JK", "DOID.JK", "STRK.JK", "VKTR.JK", "WIFI.JK", "RAAM.JK", "CGAS.JK", "AMMN.JK", "PGEO.JK", "TPIA.JK", "KPIG.JK", "AWAN.JK", "DATA.JK"]
+            
+            # Masukkan 20 saham Swing manual
+            swing_stocks = ["BBCA.JK", "BBRI.JK", "BMRI.JK", "BBNI.JK", "TLKM.JK", "ASII.JK", "UNVR.JK", "ICBP.JK", "BRPT.JK", "INDF.JK", "ADRO.JK", "ITMG.JK", "PTBA.JK", "UNTR.JK"]
+            
+            results = []
+            for t in ninja_stocks:
+                results.append((t, "NINJA", 5000000000.0, 0.05))
+            for t in swing_stocks:
+                results.append((t, "SWING", 50000000000.0, 0.02))
+                
+            cursor.execute("TRUNCATE TABLE idx_universe")
+            sql = "INSERT INTO idx_universe (ticker, category, avg_value, volatility) VALUES (%s, %s, %s, %s)"
+            cursor.executemany(sql, results)
+        conn.commit()
+        return {"status": "success", "message": f"{len(results)} saham disuntikkan secara manual."}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        if conn:
+            conn.close()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

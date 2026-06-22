@@ -1,5 +1,6 @@
+from app.core.database import get_db_connection
 import pymysql
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -9,170 +10,28 @@ from urllib.parse import urlparse
 from dbutils.pooled_db import PooledDB
 from cachetools import cached, TTLCache
 
-from config import MIN_DAILY_VOLUME
-from data_engine import download_daily_data, download_intraday_data, download_global_data
-from technical_engine import analyze_swing_fortress, analyze_ninja_scalper, analyze_kavaleri_special
-from news_engine import get_news_sentiment, get_ipo_news
-from macro_engine import get_macro_data
-from notif_engine import notify_signal, notify_macro_warning
-from universe_engine import build_universe, get_universe_by_category
-from sensus_engine import run_sensus_pilihan, run_sensus_ninja, run_sensus_kavaleri
+from app.core.config import MIN_DAILY_VOLUME
+from app.services.engines.data_engine import download_daily_data, download_intraday_data, download_global_data
+from app.services.engines.technical_engine import analyze_swing_fortress, analyze_ninja_scalper, analyze_cavalry_fast_swing
+from app.services.engines.news_engine import get_news_sentiment, get_ipo_news
+from app.services.engines.macro_engine import get_macro_data
+from app.services.engines.notif_engine import notify_signal, notify_macro_warning
+from app.services.engines.universe_engine import build_universe, get_universe_by_category
+from app.services.engines.sensus_engine import run_sensus_pilihan, run_sensus_ninja, run_sensus_kavaleri
 from apscheduler.schedulers.background import BackgroundScheduler
-from notif_engine import send_telegram_message
-from paper_engine import record_paper_trade, get_paper_portfolio, evaluate_open_trades
-from whale_engine import scan_whale_accumulation
-from astro_engine import get_astro_cycles, get_current_astro_forecast
+from app.services.engines.notif_engine import send_telegram_message
+from app.services.engines.paper_engine import record_paper_trade, get_paper_portfolio, evaluate_open_trades
+from app.services.engines.whale_engine import scan_whale_accumulation
+from app.services.engines.astro_engine import get_astro_cycles, get_current_astro_forecast
 
-app = FastAPI(title="IDX Super Screener API")
+router = APIRouter()
 
-scheduler = BackgroundScheduler()
-
-def scheduled_universe_build():
-    """Tugas otomatis yang dijalankan oleh scheduler"""
-    print("[Scheduler] Memulai Sensus Saham Otomatis...")
-    try:
-        res = build_universe()
-        send_telegram_message(f"🤖 <b>SENSUS OTOMATIS SELESAI</b>\n━━━━━━━━━━━━━━━━━━━━\nSistem telah berhasil memperbarui dan mengklasifikasikan <b>{res.get('total', 0)} saham</b> untuk minggu ini.\n\nMesin siap digunakan untuk *trading* besok pagi! 🚀")
-    except Exception as e:
-        print(f"[Scheduler] Error: {e}")
-
-def scheduled_swing_daily():
-    print("[Cronjob] Memulai Radar Benteng (Harian)...")
-    try:
-        res = scan_all_swing()
-        signals = [s for s in res.get("data", []) if s.get("signal")]
-        if signals:
-            msg = "🏰 <b>REKAP BENTENG (SWING) HARI INI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-            for s in signals:
-                msg += f"• <b>{s['ticker']}</b> | Rp {s['price']}\n  TP: {s['tp']} | SL: {s['sl']}\n"
-            send_telegram_message(msg)
-    except Exception as e:
-        print(f"Cronjob Swing Error: {e}")
-
-def scheduled_kavaleri_session():
-    print("[Cronjob] Memulai Radar Kavaleri (Sesi)...")
-    try:
-        res = scan_kavaleri()
-        signals = [s for s in res.get("data", []) if s.get("signal")]
-        if signals:
-            msg = "⚡ <b>REKAP KAVALERI (SESI)</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-            for s in signals:
-                msg += f"• <b>{s['ticker']}</b> | Rp {s['price']}\n  Fast TP: {s['tp']} | SL: {s['sl']}\n"
-            send_telegram_message(msg)
-    except Exception as e:
-        print(f"Cronjob Kavaleri Error: {e}")
-
-def scheduled_ninja_realtime():
-    print("[Cronjob] Memulai Radar Ninja (Real-time)...")
-    try:
-        # Panggil endpoint internal, tapi batasi manual
-        conn = get_db_connection()
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT ticker FROM watchlists WHERE mode='ninja' LIMIT 35")
-                ninja_tickers = [row['ticker'] for row in cursor.fetchall()]
-        finally:
-            conn.close()
-            
-        if not ninja_tickers:
-            return
-            
-        intraday_data = download_intraday_data(ninja_tickers, interval="5m", period="5d")
-        for ticker, df in intraday_data.items():
-            if df.empty: continue
-            analysis = analyze_ninja_scalper(df)
-            if analysis.get("signal"):
-                last_close = df['Close'].iloc[-1]
-                msg = f"🥷 <b>NINJA ALERT: {ticker.replace('.JK', '')}</b>\nVolume Spike Terdeteksi!\nHarga: Rp {last_close}\nTP: {analysis.get('tp')} | SL: {analysis.get('sl')}"
-                send_telegram_message(msg)
-    except Exception as e:
-        print(f"Cronjob Ninja Error: {e}")
-
-def scheduled_paper_evaluate():
-    """Evaluasi status Paper Trading"""
-    print("[Scheduler] Evaluasi Paper Trading...")
-    evaluate_open_trades()
-
-@app.on_event("startup")
-def start_scheduler():
-    # Sensus: Setiap Minggu jam 23:00
-    scheduler.add_job(scheduled_universe_build, 'cron', day_of_week='sun', hour=23, minute=0)
-    
-    # Paper Trade Evaluation: Setiap jam bursa
-    scheduler.add_job(scheduled_paper_evaluate, 'cron', day_of_week='mon-fri', hour='9-16', minute=0)
-    
-    # Mode Benteng & Paus & Global: Jam 16:15
-    scheduler.add_job(scheduled_swing_daily, 'cron', day_of_week='mon-fri', hour=16, minute=15)
-    
-    # Mode Kavaleri: Akhir sesi 1 (11:30) dan sesi 2 (15:30)
-    scheduler.add_job(scheduled_kavaleri_session, 'cron', day_of_week='mon-fri', hour=11, minute=30)
-    scheduler.add_job(scheduled_kavaleri_session, 'cron', day_of_week='mon-fri', hour=15, minute=30)
-    
-    # Mode Ninja (Realtime Max 35 Stocks): Setiap 15 menit
-    scheduler.add_job(scheduled_ninja_realtime, 'cron', day_of_week='mon-fri', hour='9-15', minute='*/15')
-    
-    scheduler.start()
-    print("[Scheduler] APScheduler aktif dengan jadwal Kuantitatif.")
-
-@app.on_event("shutdown")
-def stop_scheduler():
-    scheduler.shutdown()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Database Connection Pool Helper (Support Railway & Local)
-pool = None
-
-def init_db_pool():
-    global pool
-    db_url = os.environ.get("MYSQL_URL")
-    if db_url:
-        parsed = urlparse(db_url)
-        pool = PooledDB(
-            creator=pymysql,
-            maxconnections=20,
-            mincached=2,
-            maxcached=5,
-            blocking=True,
-            host=parsed.hostname,
-            user=parsed.username,
-            password=parsed.password,
-            database=parsed.path[1:],
-            port=parsed.port or 3306,
-            cursorclass=pymysql.cursors.DictCursor
-        )
-    else:
-        pool = PooledDB(
-            creator=pymysql,
-            maxconnections=20,
-            mincached=2,
-            maxcached=5,
-            blocking=True,
-            host=os.environ.get("MYSQLHOST", "localhost"),
-            user=os.environ.get("MYSQLUSER", "root"),
-            password=os.environ.get("MYSQLPASSWORD") or os.environ.get("MYSQL_PASSWORD", ""),
-            database=os.environ.get("MYSQLDATABASE", "idx_screener"),
-            port=int(os.environ.get("MYSQLPORT", 3306)),
-            cursorclass=pymysql.cursors.DictCursor
-        )
-
-def get_db_connection():
-    global pool
-    if pool is None:
-        init_db_pool()
-    return pool.connection()
 
 class WatchlistItem(BaseModel):
     ticker: str
     mode: str
 
-@app.get("/api/watchlist")
+@router.get("/api/watchlist")
 def get_watchlist():
     conn = get_db_connection()
     try:
@@ -182,7 +41,7 @@ def get_watchlist():
     finally:
         conn.close()
 
-@app.post("/api/watchlist")
+@router.post("/api/watchlist")
 def add_watchlist(item: WatchlistItem):
     # Ensure ticker ends with .JK for Yahoo Finance
     ticker = item.ticker.upper()
@@ -203,7 +62,7 @@ def add_watchlist(item: WatchlistItem):
     finally:
         conn.close()
 
-@app.delete("/api/watchlist/{id}")
+@router.delete("/api/watchlist/{id}")
 def delete_watchlist(id: int):
     conn = get_db_connection()
     try:
@@ -214,7 +73,7 @@ def delete_watchlist(id: int):
     finally:
         conn.close()
 
-@app.post("/api/sensus")
+@router.post("/api/sensus")
 def trigger_sensus():
     """
     Menjalankan proses Sensus Emiten Pilihan.
@@ -244,7 +103,7 @@ def trigger_sensus():
     finally:
         conn.close()
 
-@app.post("/api/sensus/ninja")
+@router.post("/api/sensus/ninja")
 def trigger_sensus_ninja():
     """
     Menjalankan proses Sensus khusus Saham Gorengan (Ninja).
@@ -272,7 +131,7 @@ def trigger_sensus_ninja():
     finally:
         conn.close()
 
-@app.post("/api/sensus/kavaleri")
+@router.post("/api/sensus/kavaleri")
 def trigger_sensus_kavaleri():
     """Menjalankan kurasi khusus untuk Mode Kavaleri (Fast Swing)"""
     curated_tickers = run_sensus_kavaleri()
@@ -292,7 +151,7 @@ def trigger_sensus_kavaleri():
     finally:
         conn.close()
 
-@app.get("/api/news/ipo")
+@router.get("/api/news/ipo")
 def get_ipo_radar():
     """
     Mengambil headline berita IPO terbaru.
@@ -300,8 +159,8 @@ def get_ipo_radar():
     ipo_news = get_ipo_news()
     return {"data": ipo_news}
 
-@app.get("/api/scan/swing")
-def scan_swing():
+@router.get("/api/scan/swing")
+def scan_swing(premium: bool = True):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -313,7 +172,7 @@ def scan_swing():
     if not swing_universe:
         return {"data": []}
 
-    daily_data = download_daily_data(swing_universe, period="1y")
+    daily_data = download_daily_data(swing_universe, period="1y", use_premium=premium)
     results = []
     
     for ticker, df in daily_data.items():
@@ -374,8 +233,8 @@ def scan_swing():
         
     return {"data": results}
 
-@app.get("/api/scan/kavaleri")
-def scan_kavaleri():
+@router.get("/api/scan/kavaleri")
+def scan_kavaleri(premium: bool = True):
     """Memindai saham mode Kavaleri (Fast Swing 1-7 Hari) dengan TTM Squeeze & SMC"""
     conn = get_db_connection()
     try:
@@ -389,7 +248,7 @@ def scan_kavaleri():
         return {"data": [], "message": "Jalankan Sensus Kavaleri terlebih dahulu!"}
         
     yfinance_tickers = [t if t.endswith(".JK") else f"{t}.JK" for t in tickers]
-    data_dict = download_daily_data(yfinance_tickers, period="6mo")
+    data_dict = download_daily_data(yfinance_tickers, period="6mo", use_premium=premium)
     
     results = []
     for t_raw, df in data_dict.items():
@@ -437,8 +296,8 @@ def scan_kavaleri():
         
     return {"data": results}
 
-@app.get("/api/scan/ninja")
-def scan_ninja():
+@router.get("/api/scan/ninja")
+def scan_ninja(premium: bool = True):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -450,7 +309,7 @@ def scan_ninja():
     if not scalp_universe:
         return {"data": []}
 
-    intraday_data = download_intraday_data(scalp_universe, interval="5m", period="5d")
+    intraday_data = download_intraday_data(scalp_universe, interval="5m", period="5d", use_premium=premium)
     results = []
     
     for ticker, df in intraday_data.items():
@@ -490,7 +349,7 @@ def scan_ninja():
         
     return {"data": results}
 
-@app.get("/api/scan/whale")
+@router.get("/api/scan/whale")
 def scan_whale():
     """Memindai akumulasi Paus (Foreign Broker / Massive Net Buy) pada Watchlist."""
     conn = get_db_connection()
@@ -522,7 +381,7 @@ def scan_whale():
             
     return {"data": results}
 
-@app.get("/api/macro")
+@router.get("/api/macro")
 def get_macro():
     """Endpoint untuk mengambil data Makro Ekonomi real-time."""
     data = get_macro_data()
@@ -530,7 +389,7 @@ def get_macro():
     notify_macro_warning(data)
     return data
 
-@app.get("/api/astro/forecast")
+@router.get("/api/astro/forecast")
 def get_astro_forecast():
     """Mengambil ramalan bintang (Astro Forecast) hari ini."""
     try:
@@ -539,21 +398,21 @@ def get_astro_forecast():
     except Exception as e:
         return {"data": [], "error": str(e)}
 
-@app.get("/api/composite")
-def get_composite_signals():
+@router.get("/api/composite")
+def get_composite_signals(premium: bool = True):
     """Mengumpulkan semua sinyal aktif dari seluruh mode secara paralel."""
     results = []
     
     def fetch_swing():
-        res = scan_all_swing()
+        res = scan_all_swing(premium=premium)
         return [dict(item, source="Benteng") for item in res["data"] if item.get("signal")]
         
     def fetch_kavaleri():
-        res = scan_kavaleri()
+        res = scan_kavaleri(premium=premium)
         return [dict(item, source="Kavaleri") for item in res["data"] if item.get("signal")]
         
     def fetch_ninja():
-        res = scan_all_ninja()
+        res = scan_all_ninja(premium=premium)
         return [dict(item, source="Ninja") for item in res["data"] if item.get("signal")]
         
     def fetch_global():
@@ -581,7 +440,7 @@ def get_composite_signals():
                 
     return {"data": results}
 
-@app.get("/api/scan/global")
+@router.get("/api/scan/global")
 def scan_global():
     """Memindai aset Global (Gold & Forex Utama) menggunakan Astro Engine & Teknikal."""
     # Daftar aset global utama: Emas, EURUSD, GBPUSD, JPYUSD, Index S&P500
@@ -618,7 +477,7 @@ def scan_global():
         
     return {"data": results}
 
-@app.get("/api/chart/{ticker}")
+@router.get("/api/chart/{ticker}")
 def get_chart_data(ticker: str, is_global: bool = False):
     """Mengambil data OHLC historis untuk TradingView Chart dan Astro Markers"""
     # Menggunakan daily data selama 6 bulan
@@ -656,7 +515,7 @@ def get_chart_data(ticker: str, is_global: bool = False):
     except Exception as e:
         return {"data": [], "markers": [], "error": str(e)}
 
-@app.get("/api/xray/{ticker}")
+@router.get("/api/xray/{ticker}")
 def xray_ticker(ticker: str):
     """Melakukan deep scan pada satu saham"""
     from xray_engine import run_xray_scan
@@ -666,13 +525,13 @@ def xray_ticker(ticker: str):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/api/portfolio")
+@router.get("/api/portfolio")
 def get_portfolio():
     """Mengambil riwayat Paper Trading"""
     data = get_paper_portfolio()
     return {"data": data}
 
-@app.post("/api/universe/build")
+@router.post("/api/universe/build")
 def build_idx_universe():
     """Endpoint untuk menjalankan sensus seluruh saham IDX"""
     result = build_universe()
@@ -680,16 +539,13 @@ def build_idx_universe():
 
 swing_cache = TTLCache(maxsize=100, ttl=60)
 
-@app.get("/api/scan/all-swing")
-@cached(cache=swing_cache)
-def scan_all_swing():
+@router.get("/api/scan/all-swing")
+def scan_all_swing(premium: bool = True):
     """Scan menggunakan kategori SWING dari Universe"""
     swing_universe = get_universe_by_category("SWING")
     if not swing_universe:
         return {"data": [], "message": "Universe kosong. Jalankan Sensus Saham dulu."}
     
-    # Batasi sementara maks 50 saham per scan agar tidak timeout saat tes
-    # (Di level production bisa pakai pagination atau async background task)
     swing_universe = swing_universe[:100] 
     
     macro_data = get_macro_data()
@@ -699,7 +555,7 @@ def scan_all_swing():
     COAL_STOCKS = ["ADRO", "PTBA", "ITMG", "BUMI", "HRUM", "INDY", "DOID", "BSSR"]
     GOLD_STOCKS = ["MDKA", "PSAB", "BRMS", "AMMN", "ARCI", "SQMI"]
     
-    daily_data = download_daily_data(swing_universe, period="1y")
+    daily_data = download_daily_data(swing_universe, period="1y", use_premium=premium)
     results = []
     
     for ticker, df in daily_data.items():
@@ -765,9 +621,8 @@ def scan_all_swing():
 
 ninja_cache = TTLCache(maxsize=100, ttl=60)
 
-@app.get("/api/scan/all-ninja")
-@cached(cache=ninja_cache)
-def scan_all_ninja():
+@router.get("/api/scan/all-ninja")
+def scan_all_ninja(premium: bool = True):
     """Scan menggunakan kategori NINJA dari Universe"""
     ninja_universe = get_universe_by_category("NINJA")
     if not ninja_universe:
@@ -782,7 +637,7 @@ def scan_all_ninja():
     COAL_STOCKS = ["ADRO", "PTBA", "ITMG", "BUMI", "HRUM", "INDY", "DOID", "BSSR"]
     GOLD_STOCKS = ["MDKA", "PSAB", "BRMS", "AMMN", "ARCI", "SQMI"]
     
-    intraday_data = download_intraday_data(ninja_universe, period="1mo", interval="5m")
+    intraday_data = download_intraday_data(ninja_universe, period="1mo", interval="5m", use_premium=premium)
     results = []
     
     for ticker, df in intraday_data.items():
@@ -846,7 +701,7 @@ def scan_all_ninja():
     return {"data": results}
 
 
-@app.get("/api/init-db")
+@router.get("/api/init-db")
 def init_db_endpoint():
     conn = None
     try:
@@ -910,7 +765,7 @@ def init_db_endpoint():
     return {"status": "success", "message": "Database tables created and seeded successfully!"}
 
 
-@app.get("/api/debug-universe")
+@router.get("/api/debug-universe")
 def debug_universe():
     conn = None
     try:
@@ -929,7 +784,7 @@ def debug_universe():
         if conn:
             conn.close()
 
-@app.get("/api/emergency-seed")
+@router.get("/api/emergency-seed")
 def emergency_seed():
     conn = None
     try:

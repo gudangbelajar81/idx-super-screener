@@ -1,5 +1,5 @@
 import concurrent.futures
-from goapi_engine import get_broker_summary, get_goapi_price
+from app.services.engines.goapi_engine import get_broker_summary, get_goapi_price
 
 WHALE_BROKERS = ["AK", "BK", "ZP", "CS", "RX", "YU", "KZ", "CG", "YP", "CC", "NI"]
 

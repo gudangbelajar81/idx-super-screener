@@ -4,8 +4,8 @@ import pymysql
 import numpy as np
 import os
 
-from config import MIN_DAILY_VOLUME
-from idx_tickers import get_all_idx_tickers
+from app.core.config import MIN_DAILY_VOLUME
+from app.core.idx_tickers import get_all_idx_tickers
 
 # Nilai batas volatilitas (misal rata-rata pergerakan harian > 4% = Gorengan)
 VOLATILITY_THRESHOLD = 0.04

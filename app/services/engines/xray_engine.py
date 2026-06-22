@@ -1,8 +1,8 @@
-from data_engine import download_daily_data, download_intraday_data
-from technical_engine import analyze_swing_fortress, analyze_ninja_scalper
-from news_engine import get_news_sentiment
-from macro_engine import get_macro_data
-from goapi_engine import get_goapi_price, get_broker_summary
+from app.services.engines.data_engine import download_daily_data, download_intraday_data
+from app.services.engines.technical_engine import analyze_swing_fortress, analyze_ninja_scalper
+from app.services.engines.news_engine import get_news_sentiment
+from app.services.engines.macro_engine import get_macro_data
+from app.services.engines.goapi_engine import get_goapi_price, get_broker_summary
 
 def generate_mentor_advice(ticker, daily_res, intraday_res, news_res, macro_res, broker_res):
     """

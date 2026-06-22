@@ -34,8 +34,9 @@ def send_telegram_message(text: str) -> bool:
 
 def notify_signal(stock: dict, mode: str = "swing") -> bool:
     """
-    [TITAN VISUAL v2] Memformat dan mengirim notifikasi sinyal saham ke Telegram.
+    [TITAN VISUAL v3] Memformat dan mengirim notifikasi sinyal saham ke Telegram.
     Format: Premium Institutional Grade (Standar J.P. Morgan / Goldman Sachs)
+    Ditambah fitur AstroCycle: Win Probability & Smart Money Score.
     """
     if not stock.get("signal"):
         return False
@@ -49,6 +50,14 @@ def notify_signal(stock: dict, mode: str = "swing") -> bool:
     cmf    = stock.get("cmf", 0)
     above_vwap = stock.get("above_vwap", None)
     stoch_k = stock.get("stoch_rsi_k", None)
+    
+    # Field Baru Fase 1 & 2 (AstroCycle)
+    smart_money_score = stock.get("smart_money_score", 0)
+    bandar_verdict = stock.get("bandar_verdict", "netral")
+    win_probability = stock.get("win_probability", 50.0)
+    
+    ai_prediction = stock.get("ai_prediction", "")
+    ai_confidence = stock.get("ai_confidence", 0)
     
     # === HEADER BERDASARKAN MODE ===
     if mode == "ninja":
@@ -89,12 +98,28 @@ def notify_signal(stock: dict, mode: str = "swing") -> bool:
         cmf_badge = "➕ Positif"
     else:
         cmf_badge = "⚠️ Lemah"
+        
+    # === BANDARMOLOGY (SMART MONEY) ===
+    if bandar_verdict == "akumulasi":
+        bandar_badge = f"🟢 Akumulasi ({smart_money_score:.2f})"
+    elif bandar_verdict == "distribusi":
+        bandar_badge = f"🔴 Distribusi ({smart_money_score:.2f})"
+    else:
+        bandar_badge = f"⚪ Netral ({smart_money_score:.2f})"
+        
+    # === WIN PROBABILITY ===
+    prob_badge = f"🌟 {win_probability:.1f}% (Tinggi)" if win_probability >= 65 else f"⭐ {win_probability:.1f}% (Moderat)"
+    
+    # === AI PREDICTION ===
+    ai_line = ""
+    if ai_prediction:
+        ai_line = f"  🤖 Prediksi 5-Hari    : <b>{ai_prediction}</b> (Akurasi: {ai_confidence}%)\n"
     
     # === VWAP STATUS ===
     vwap_line = ""
     if above_vwap is not None:
         vwap_status = "✅ Di Atas VWAP" if above_vwap else "⚠️ Di Bawah VWAP"
-        vwap_line = f"📍 VWAP    : {vwap_status}\n"
+        vwap_line = f"  📍 VWAP         : {vwap_status}\n"
     
     # === STOCHASTIC RSI ===
     stoch_line = ""
@@ -106,7 +131,7 @@ def notify_signal(stock: dict, mode: str = "swing") -> bool:
             stoch_status = f"🟡 {stoch_pct:.0f}% (Momentum Aktif)"
         else:
             stoch_status = f"🔶 {stoch_pct:.0f}% (Mendekati Puncak)"
-        stoch_line = f"📈 Stoch RSI: {stoch_status}\n"
+        stoch_line = f"  📈 Stoch RSI    : {stoch_status}\n"
     
     # === BADAN PESAN UTAMA ===
     message = (
@@ -120,11 +145,14 @@ def notify_signal(stock: dict, mode: str = "swing") -> bool:
         f"  🔴 Stop Loss     : <b>Rp {sl:,.0f}</b>  ({sl_pct})\n"
         f"  ⚖️  Risk / Reward : <b>{rr_text}</b>\n"
         f"\n"
-        f"📡 <b>ANALISIS MESIN</b>\n"
-        f"  💰 Tekanan Bandar : {cmf_badge} ({cmf})\n"
-        f"  📰 Sentimen Berita: {sent_badge}\n"
-        f"  {vwap_line.strip()}\n"
-        f"  {stoch_line.strip()}\n"
+        f"📡 <b>ANALISIS MESIN (ASTROCYCLE)</b>\n"
+        f"  💎 Probabilitas Menang: <b>{prob_badge}</b>\n"
+        f"  🐋 Aksi Bandar        : <b>{bandar_badge}</b>\n"
+        f"  💰 Tekanan CMF        : {cmf_badge} ({cmf})\n"
+        f"  📰 Sentimen Berita    : {sent_badge}\n"
+        f"{ai_line}"
+        f"{vwap_line}"
+        f"{stoch_line}"
         f"\n"
         f"┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n"
         f"{urgency}\n"

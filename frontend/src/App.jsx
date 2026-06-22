@@ -41,10 +41,14 @@ function App() {
   const [newTicker, setNewTicker] = useState("");
   const [newMode, setNewMode] = useState("swing");
 
+  // === PREMIUM / FREE MODE TOGGLE ===
+  // isPremium=true -> GoAPI VIP (potong token), isPremium=false -> Yahoo Finance (gratis)
+  const [isPremium, setIsPremium] = useState(false);
+
   const fetchComposite = async () => {
     setCompositeLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/composite`);
+      const res = await axios.get(`${API_BASE}/api/composite?premium=${isPremium}`);
       setCompositeData(res.data.data);
     } catch (err) {
       console.error(err);
@@ -55,7 +59,7 @@ function App() {
   const fetchSwing = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/swing`);
+      const res = await axios.get(`${API_BASE}/api/scan/swing?premium=${isPremium}`);
       setSwingData(res.data.data);
     } catch (err) {
       console.error(err);
@@ -66,7 +70,7 @@ function App() {
   const fetchKavaleri = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/kavaleri`);
+      const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${isPremium}`);
       setKavaleriData(res.data.data);
     } catch (err) {
       console.error(err);
@@ -102,7 +106,7 @@ function App() {
   const fetchNinja = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/ninja`);
+      const res = await axios.get(`${API_BASE}/api/scan/ninja?premium=${isPremium}`);
       setNinjaData(res.data.data);
     } catch (err) {
       console.error(err);
@@ -114,15 +118,15 @@ function App() {
     setLoading(true);
     try {
       if (activeTab === 'swing') {
-        const res = await axios.get(`${API_BASE}/api/scan/all-swing`);
+        const res = await axios.get(`${API_BASE}/api/scan/all-swing?premium=${isPremium}`);
         if (res.data.message) alert(res.data.message);
         setSwingData(res.data.data || []);
       } else if (activeTab === 'kavaleri') {
-        const res = await axios.get(`${API_BASE}/api/scan/kavaleri`); // Fast scan is default
+        const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${isPremium}`);
         if (res.data.message) alert(res.data.message);
         setKavaleriData(res.data.data || []);
       } else {
-        const res = await axios.get(`${API_BASE}/api/scan/all-ninja`);
+        const res = await axios.get(`${API_BASE}/api/scan/all-ninja?premium=${isPremium}`);
         if (res.data.message) alert(res.data.message);
         setNinjaData(res.data.data || []);
       }
@@ -349,9 +353,64 @@ function App() {
       <main className="main-content">
         <header className="header">
           <h1>
-            {activeTab === 'home' ? '🌐 Ultimate Command Center' : activeTab === 'swing' ? 'Benteng (Swing Trading)' : activeTab === 'kavaleri' ? 'Kavaleri (Fast Swing SMC)' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'ninja' ? 'Ninja (Gorengan Scalper)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
+            {activeTab === 'home' ? 'Ultimate Command Center' : activeTab === 'swing' ? 'Benteng (Swing Trading)' : activeTab === 'kavaleri' ? 'Kavaleri (Fast Swing SMC)' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'ninja' ? 'Ninja (Gorengan Scalper)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
           </h1>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+
+            {/* === PREMIUM TOGGLE BUTTON === */}
+            <div
+              id="premium-toggle"
+              onClick={() => setIsPremium(p => !p)}
+              title={isPremium ? 'Mode PREMIUM aktif (GoAPI VIP - Token terpotong)' : 'Mode GRATIS aktif (Yahoo Finance - Tidak potong token)'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                border: isPremium ? '1px solid #f1c40f' : '1px solid rgba(255,255,255,0.2)',
+                background: isPremium
+                  ? 'linear-gradient(135deg, rgba(241,196,15,0.25), rgba(230,126,34,0.15))'
+                  : 'rgba(255,255,255,0.07)',
+                transition: 'all 0.3s ease',
+                userSelect: 'none',
+                boxShadow: isPremium ? '0 0 12px rgba(241,196,15,0.4)' : 'none',
+              }}
+            >
+              {/* Toggle Track */}
+              <div style={{
+                position: 'relative',
+                width: '38px',
+                height: '20px',
+                borderRadius: '999px',
+                background: isPremium ? 'linear-gradient(90deg, #f1c40f, #e67e22)' : 'rgba(255,255,255,0.15)',
+                transition: 'background 0.3s ease',
+                flexShrink: 0,
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: isPremium ? '20px' : '3px',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.3s ease',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }} />
+              </div>
+              <span style={{
+                fontSize: '12px',
+                fontWeight: '700',
+                color: isPremium ? '#f1c40f' : '#aaa',
+                letterSpacing: '0.5px',
+                transition: 'color 0.3s',
+              }}>
+                {isPremium ? 'PREMIUM ON' : 'FREE MODE'}
+              </span>
+            </div>
+
             <form onSubmit={handleXRaySubmit} style={{ position: 'relative' }}>
               <input 
                 type="text" 

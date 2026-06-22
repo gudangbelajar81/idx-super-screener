@@ -1,7 +1,7 @@
 import pandas as pd
 import ta
-from data_engine import download_daily_data
-from technical_engine import calc_chaikin_money_flow
+from app.services.engines.data_engine import download_daily_data
+from app.services.engines.technical_engine import calc_chaikin_money_flow
 
 # Daftar 80-100 saham berkapitalisasi besar & menengah yang aktif ditransaksikan (IDX80/Kompas100 approach)
 SENSUS_UNIVERSE = [

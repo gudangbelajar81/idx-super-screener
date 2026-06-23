@@ -8,71 +8,21 @@ def generate_mentor_advice(ticker, daily_res, intraday_res, news_res, macro_res,
     """
     Menghasilkan kesimpulan bergaya mentor formal berdasarkan kompilasi data.
     """
-    ticker_clean = ticker.replace(".JK", "")
-    advice = []
+    from app.services.engines.llm_engine import generate_xray_analysis
     
-    # 1. Analisis Tren Harian (Swing)
-    if daily_res.get("signal"):
-        advice.append(f"Secara fundamental teknikal harian, {ticker_clean} berada dalam fase Uptrend yang solid, didukung oleh akumulasi institusional (ZLSMA) dengan Arus Uang (CMF) positif sebesar {daily_res.get('cmf', 0)}.")
-    else:
-        advice.append(f"Berdasarkan kerangka waktu harian, {ticker_clean} belum menunjukkan sinyal Uptrend yang valid atau masih berada di bawah tekanan distribusi.")
-
-    # 2. Analisis Intraday (Ninja/Scalping)
-    if intraday_res.get("signal"):
-        advice.append(f"Pada kerangka waktu jangka pendek (5-menit), terdapat anomali lonjakan volume yang mengindikasikan adanya akumulasi agresif (Smart Money).")
-    elif intraday_res.get("volume_spike"):
-        advice.append(f"Secara jangka pendek, terlihat ada volume transaksi besar namun harga cenderung tertahan (distribusi tersembunyi).")
-    else:
-        advice.append(f"Secara jangka pendek, volume perdagangan relatif sepi tanpa adanya partisipasi pelaku pasar dominan.")
-
-    # 3. Sentimen Berita
-    sentiment = news_res.get("sentiment", "NETRAL")
-    if "POSITIF" in sentiment:
-        advice.append(f"Sentimen pemberitaan saat ini sangat mendukung pergerakan harga ke atas.")
-    elif "NEGATIF" in sentiment:
-        advice.append(f"Terdapat sentimen negatif pada pemberitaan yang berpotensi menjadi katalis penurunan.")
-
-    # 4. Makro Ekonomi
-    coal_stocks = ["ADRO", "PTBA", "ITMG", "BUMI", "HRUM", "INDY", "DOID", "BSSR"]
-    gold_stocks = ["MDKA", "PSAB", "BRMS", "AMMN", "ARCI", "SQMI"]
+    # Bungkus semua data ke dalam dictionary untuk dikirim ke LLM
+    stock_data = {
+        "ticker": ticker,
+        "price": daily_res.get("last_close", intraday_res.get("last_close", 0)),
+        "daily": daily_res,
+        "intraday": intraday_res,
+        "news": news_res,
+        "macro": macro_res,
+        "broker": broker_res
+    }
     
-    macro_note = ""
-    coal_trend = macro_res.get("coal", {}).get("trend", "STABIL")
-    gold_trend = macro_res.get("gold", {}).get("trend", "STABIL")
-    
-    if ticker_clean in coal_stocks and coal_trend == "TURUN":
-        macro_note = "Peringatan Makro: Harga acuan batu bara global sedang dalam fase penurunan. Risiko sistemik cukup tinggi."
-    elif ticker_clean in gold_stocks and gold_trend == "NAIK":
-        macro_note = "Katalis Makro: Kenaikan harga emas global memberikan dorongan positif yang sangat kuat bagi emiten ini."
-
-    if macro_note:
-        advice.append(macro_note)
-
-    # 5. Kesimpulan Bandarmologi & Rekomendasi
-    advice.append("\n**Kesimpulan & Rekomendasi:**")
-    
-    broker_info = f"Terdeteksi Bandar menggunakan broker {broker_res['top_buyer']} sedang melakukan {broker_res['status']} melawan ritel {broker_res['top_seller']}. "
-    
-    if broker_res.get('jejak_kaki') and broker_res['jejak_kaki']['is_golden']:
-        advice.append(f"**GOLDEN ENTRY:** Harga saat ini lebih rendah/sama dengan harga modal bandar! Ini adalah kesempatan emas untuk masuk dengan risiko minim.")
-    elif broker_res.get('jejak_kaki') and broker_res['jejak_kaki']['is_danger']:
-        advice.append(f"**RAWAN GUYURAN:** Harga sudah naik terlalu tinggi dari modal bandar dan bandar sedang distribusi. Sangat berisiko!")
-
-    if daily_res.get("signal") and intraday_res.get("signal") and broker_res['status'] == "AKUMULASI":
-        advice.append(broker_info + "Sangat Direkomendasikan. Emiten ini layak untuk eksekusi beli (Buy) dengan strategi Swing maupun Scalping, mengingat konfirmasi positif di berbagai kerangka waktu dan didukung bandar.")
-    elif broker_res['status'] == "AKUMULASI":
-        advice.append(broker_info + "Layak Dipertimbangkan. Meski teknikal belum sempurna, dukungan akumulasi bandar (Big Money) menjadi katalis yang kuat.")
-    elif daily_res.get("signal"):
-        advice.append("Layak Dipertimbangkan untuk Swing Trading, namun berhati-hati karena Bandar belum sepenuhnya akumulasi.")
-    elif intraday_res.get("signal"):
-        if daily_res.get("last_close", 0) < daily_res.get("ema50", 0):
-             advice.append("Spekulatif Tinggi. Terdapat perlawanan jangka pendek, namun tren utama masih turun (Downtrend). Eksekusi hanya disarankan bagi Scalper berpengalaman dengan Stop Loss sangat ketat (Hit and Run).")
-        else:
-             advice.append("Peluang Scalping. Sangat cocok untuk *day-trading* memanfaatkan momentum volume saat ini.")
-    else:
-        advice.append(f"Tidak Direkomendasikan (Wait and See). {broker_res['top_seller']} sedang membuang barang. Sebaiknya Anda menghindari emiten ini hingga struktur harganya membaik.")
-
-    return " ".join(advice)
+    # Panggil Omni-API Gateway untuk meminta AI merangkai kata-kata
+    return generate_xray_analysis(stock_data)
 
 def run_xray_scan(ticker: str):
     """

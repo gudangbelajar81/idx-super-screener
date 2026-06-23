@@ -33,6 +33,8 @@ def setup_database():
                     buy_price FLOAT NOT NULL,
                     tp_price FLOAT NOT NULL,
                     sl_price FLOAT NOT NULL,
+                    sl2_price FLOAT DEFAULT NULL,
+                    sl2_uji INT DEFAULT 0,
                     status VARCHAR(20) DEFAULT 'OPEN',
                     sell_price FLOAT DEFAULT NULL,
                     pnl_pct FLOAT DEFAULT NULL,
@@ -40,6 +42,12 @@ def setup_database():
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             """)
+            
+            try:
+                cursor.execute("ALTER TABLE idx_paper_trades ADD COLUMN sl2_price FLOAT DEFAULT NULL AFTER sl_price")
+                cursor.execute("ALTER TABLE idx_paper_trades ADD COLUMN sl2_uji INT DEFAULT 0 AFTER sl2_price")
+            except Exception:
+                pass
 
             # 4. Tabel Signals (Untuk Autopilot Swing & Position)
             cursor.execute("""
@@ -54,10 +62,18 @@ def setup_database():
                     reason TEXT,
                     tp FLOAT,
                     sl FLOAT,
+                    sl2 FLOAT DEFAULT NULL,
+                    sl2_uji INT DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE KEY unique_ticker_mode (ticker, mode)
                 )
             """)
+            
+            try:
+                cursor.execute("ALTER TABLE idx_signals ADD COLUMN sl2 FLOAT DEFAULT NULL AFTER sl")
+                cursor.execute("ALTER TABLE idx_signals ADD COLUMN sl2_uji INT DEFAULT 0 AFTER sl2")
+            except Exception:
+                pass
 
             # 6. Tabel Pusat API Key
             cursor.execute("""

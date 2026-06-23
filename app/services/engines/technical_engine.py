@@ -35,29 +35,46 @@ def find_pivot_lows(series: pd.Series, left: int = 5, right: int = 5) -> pd.Seri
             pivots.iloc[i] = series.iloc[i]
     return pivots
 
-def calculate_sr_zones(df: pd.DataFrame, left: int = 5, right: int = 5, zone_pct: float = 0.01) -> dict:
+def calculate_sr_zones(df: pd.DataFrame, left: int = 5, right: int = 5, zone_pct: float = 0.02) -> dict:
     pivot_highs = find_pivot_highs(df['High'], left, right)
     pivot_lows = find_pivot_lows(df['Low'], left, right)
     valid_highs = pivot_highs.dropna().values
     valid_lows = pivot_lows.dropna().values
     last_close = df['Close'].iloc[-1]
     
-    resistance_zones = []
-    for ph in valid_highs:
-        if ph > last_close:
-            resistance_zones.append({"center": ph, "low": ph * (1 - zone_pct), "high": ph * (1 + zone_pct)})
-            
-    support_zones = []
-    for pl in valid_lows:
-        if pl < last_close:
-            support_zones.append({"center": pl, "low": pl * (1 - zone_pct), "high": pl * (1 + zone_pct)})
-            
+    def cluster_pivots(pivots, threshold=0.03):
+        clusters = []
+        for p in pivots:
+            found = False
+            for cluster in clusters:
+                if abs(p - cluster['center']) / cluster['center'] <= threshold:
+                    cluster['points'].append(p)
+                    cluster['center'] = sum(cluster['points']) / len(cluster['points'])
+                    cluster['count'] += 1
+                    found = True
+                    break
+            if not found:
+                clusters.append({'center': p, 'points': [p], 'count': 1})
+        return clusters
+
+    res_clusters = cluster_pivots(valid_highs, zone_pct)
+    sup_clusters = cluster_pivots(valid_lows, zone_pct)
+    
+    resistance_zones = [c for c in res_clusters if c['center'] > last_close]
+    support_zones = [c for c in sup_clusters if c['center'] < last_close]
+    
+    # Sort resistance by closest to current price (ascending)
     resistance_zones.sort(key=lambda x: x['center'])
+    # Sort support by closest to current price (descending)
     support_zones.sort(key=lambda x: x['center'], reverse=True)
+    
+    # Find strongest support (highest count)
+    strongest_support = sorted(support_zones, key=lambda x: x['count'], reverse=True)[0] if support_zones else None
     
     return {
         "nearest_resistance": resistance_zones[0] if resistance_zones else None,
         "nearest_support": support_zones[0] if support_zones else None,
+        "strongest_support": strongest_support,
         "all_resistance": resistance_zones[:5],
         "all_support": support_zones[:5]
     }
@@ -122,6 +139,8 @@ def analyze_swing_fortress(df: pd.DataFrame) -> dict:
     
     tp_price = None
     sl_price = None
+    sl2_price = None
+    sl2_uji = 0
     risk_reward = None
     
     if signal:
@@ -134,6 +153,21 @@ def analyze_swing_fortress(df: pd.DataFrame) -> dict:
             sl_price = round(sr_zones['nearest_support']['center'], 0)
         else:
             sl_price = round(last_close * 0.97, 0)
+            
+        # Tentukan SL 2 (SL Major)
+        if sr_zones['strongest_support']:
+            sl2_raw = round(sr_zones['strongest_support']['center'], 0)
+            sl2_uji = sr_zones['strongest_support']['count']
+        else:
+            sl2_raw = round(last_close * 0.95, 0)
+            sl2_uji = 1
+            
+        # Batasan maksimal SL 2 (Max Cap -8%)
+        max_loss_price = round(last_close * 0.92, 0)
+        if sl2_raw < max_loss_price:
+            sl2_price = max_loss_price
+        else:
+            sl2_price = sl2_raw
             
         if tp_price and sl_price and (last_close - sl_price) > 0:
             risk = last_close - sl_price
@@ -168,6 +202,7 @@ def analyze_swing_fortress(df: pd.DataFrame) -> dict:
 
     if tp_price: tp_price = _round_price(tp_price)
     if sl_price: sl_price = _round_price(sl_price)
+    if sl2_price: sl2_price = _round_price(sl2_price)
 
 
     # --- AI Prediction (AstroCycle Machine Learning Proxy) ---
@@ -186,6 +221,8 @@ def analyze_swing_fortress(df: pd.DataFrame) -> dict:
         "win_probability": round(win_probability, 1),
         "tp": tp_price,
         "sl": sl_price,
+        "sl2": sl2_price,
+        "sl2_uji": sl2_uji,
         "rr": risk_reward,
         "ai_prediction": ai_text,
         "ai_confidence": ai_confidence
@@ -240,6 +277,16 @@ def analyze_cavalry_fast_swing(df: pd.DataFrame) -> dict:
     tp_price = round(sr_zones['nearest_resistance']['center'], 0) if sr_zones['nearest_resistance'] else round(last_close * 1.06, 0)
     sl_price = round(sr_zones['nearest_support']['center'], 0) if sr_zones['nearest_support'] else round(last_close * 0.95, 0)
     
+    if sr_zones['strongest_support']:
+        sl2_raw = round(sr_zones['strongest_support']['center'], 0)
+        sl2_uji = sr_zones['strongest_support']['count']
+    else:
+        sl2_raw = round(last_close * 0.93, 0)
+        sl2_uji = 1
+        
+    max_loss_price = round(last_close * 0.94, 0)
+    sl2_price = max_loss_price if sl2_raw < max_loss_price else sl2_raw
+    
     risk_reward = 0
     if tp_price and sl_price and (last_close - sl_price) > 0:
         risk = last_close - sl_price
@@ -255,6 +302,8 @@ def analyze_cavalry_fast_swing(df: pd.DataFrame) -> dict:
         "close": last_close,
         "tp": tp_price,
         "sl": sl_price,
+        "sl2": sl2_price,
+        "sl2_uji": sl2_uji,
         "rr": risk_reward,
     }
 

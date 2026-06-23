@@ -592,6 +592,8 @@ def scan_all_swing(premium: bool = True):
         item["cmf"] = analysis.get("cmf", 0)
         item["tp"] = analysis.get("tp")
         item["sl"] = analysis.get("sl")
+        item["sl2"] = analysis.get("sl2")
+        item["sl2_uji"] = analysis.get("sl2_uji")
         item["rr"] = analysis.get("rr")
         
         if item["signal"]:

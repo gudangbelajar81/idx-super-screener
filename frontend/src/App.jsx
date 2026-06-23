@@ -945,10 +945,32 @@ function App() {
                                 <span className="tp-value" style={{ color: '#2ed573' }}>Rp {stock.target_profit ? stock.target_profit.toLocaleString('id-ID') : '0'}</span>
                                 <span className="tp-pct tp-up">+{stock.expected_return}%</span>
                               </div>
-                              <div className="sl-block">
-                                <span className="tp-label">STOP LOSS</span>
-                                <span className="tp-value sl-val" style={{ color: '#ff4757' }}>Rp {stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : '0'}</span>
-                                <span className="tp-pct sl-down">RR: {stock.risk_reward_ratio}x</span>
+                              <div className="sl-block" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span className="tp-label">STOP LOSS 1</span>
+                                  <span className="tp-value sl-val" style={{ color: '#ff7f50', fontSize: '1em' }}>Rp {stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : '0'}</span>
+                                  <span className="tp-pct sl-down" style={{ fontSize: '0.8em' }}>RR: {stock.risk_reward_ratio}x</span>
+                                </div>
+                                
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                  <span className="tp-label" style={{ color: '#ff4757' }}>SL 2 (MAJOR)</span>
+                                  <span className="tp-value sl-val" style={{ color: '#ff4757', fontSize: '1em', fontWeight: 'bold' }}>
+                                    Rp {(() => {
+                                        try {
+                                            const edge = typeof stock.edge_data === 'string' ? JSON.parse(stock.edge_data) : stock.edge_data;
+                                            return edge?.sl2 ? edge.sl2.toLocaleString('id-ID') : stock.stop_loss;
+                                        } catch { return stock.stop_loss; }
+                                    })()}
+                                  </span>
+                                  <span className="tp-pct sl-down" style={{ fontSize: '0.7em', color: '#ff4757' }}>
+                                    {(() => {
+                                        try {
+                                            const edge = typeof stock.edge_data === 'string' ? JSON.parse(stock.edge_data) : stock.edge_data;
+                                            return edge?.sl2_uji ? `(Uji ${edge.sl2_uji}x)` : '';
+                                        } catch { return ''; }
+                                    })()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                         </div>

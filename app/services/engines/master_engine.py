@@ -4,6 +4,7 @@ import os
 import ta
 import numpy as np
 import random
+from .technical_engine import calculate_sr_zones
 
 def calc_vwap(df: pd.DataFrame) -> pd.Series:
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
@@ -151,17 +152,38 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
     if recommendation == "STRONG BUY" and is_swing_eligible: swing_rec = "STRONG BUY"
         
     
-    # Inject Historical Edge Data
+    # Inject Historical Edge Data & SL2
     edge_db = get_edge_db()
-    # Untuk simulasi, kita anggap astro hari ini Normal, tapi jika ada boost, kita kirim.
-    # Secara default kita kirim base win rates
     edge_data = edge_db.get("base_win_rates", {})
-    # Bisa tambahkan logika Astro disini jika perlu
 
-    # Projections
-    tp = round(highest_20 * 1.05, 0) if highest_20 > 0 else round(last_close * 1.05, 0)
-    sl = round(lowest_20 * 0.98, 0) if lowest_20 > 0 else round(last_close * 0.95, 0)
+    # Projections menggunakan Support/Resistance
+    sr_zones = calculate_sr_zones(df, left=10, right=10, zone_pct=0.02)
+    if sr_zones['nearest_resistance']:
+        tp = round(sr_zones['nearest_resistance']['center'], 0)
+    else:
+        tp = round(highest_20 * 1.05, 0) if highest_20 > 0 else round(last_close * 1.05, 0)
+        
+    if sr_zones['nearest_support']:
+        sl = round(sr_zones['nearest_support']['center'], 0)
+    else:
+        sl = round(lowest_20 * 0.98, 0) if lowest_20 > 0 else round(last_close * 0.95, 0)
+        
+    if sr_zones['strongest_support']:
+        sl2_raw = round(sr_zones['strongest_support']['center'], 0)
+        sl2_uji = sr_zones['strongest_support']['count']
+    else:
+        sl2_raw = round(last_close * 0.92, 0)
+        sl2_uji = 1
+        
+    max_loss_price = round(last_close * 0.92, 0)
+    sl2_price = max_loss_price if sl2_raw < max_loss_price else sl2_raw
+        
     rr = round((tp - last_close) / (last_close - sl), 2) if last_close > sl else 0.0
+    
+    # Save SL2 in edge_data so it can be extracted later
+    edge_data["sl2"] = sl2_price
+    edge_data["sl2_uji"] = sl2_uji
+
 
     return {
         "error": None,

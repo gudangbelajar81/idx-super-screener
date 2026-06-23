@@ -12,7 +12,8 @@ def run_eod_autopilot():
     print("🚀 [MASTER AI] Memulai Proses Pemindaian Total...")
     
     # Ambil 800+ saham IDX
-    all_tickers = get_all_idx_tickers()
+    # all_tickers = get_all_idx_tickers()
+    all_tickers = ['BBCA.JK', 'BMRI.JK', 'BBRI.JK', 'BBNI.JK', 'TLKM.JK', 'AMMN.JK', 'BREN.JK', 'ASII.JK', 'BRPT.JK', 'CUAN.JK']
     total_tickers = len(all_tickers)
     
     conn = get_db_connection()
@@ -25,7 +26,7 @@ def run_eod_autopilot():
                     composite_score INT, intraday_score INT, swing_score INT,
                     smart_money_status VARCHAR(50), institutional_status VARCHAR(50), catalyst_status VARCHAR(50), trend_status VARCHAR(50), setup_type VARCHAR(50),
                     recommendation VARCHAR(20), intraday_recommendation VARCHAR(20), swing_recommendation VARCHAR(20),
-                    expected_return FLOAT, target_profit FLOAT, stop_loss FLOAT, risk_reward_ratio FLOAT,
+                    expected_return FLOAT, target_profit FLOAT, stop_loss FLOAT, risk_reward_ratio FLOAT, edge_data TEXT,
                     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             ''')
@@ -81,7 +82,7 @@ def run_eod_autopilot():
                         analysis["composite_score"], analysis["intraday_score"], analysis["swing_score"],
                         analysis["smart_money_status"], analysis["institutional_status"], analysis["catalyst_status"], analysis["trend_status"], analysis["setup_type"],
                         analysis["recommendation"], analysis["intraday_recommendation"], analysis["swing_recommendation"],
-                        analysis["expected_return"], analysis["target_profit"], analysis["stop_loss"], analysis["risk_reward_ratio"]
+                        analysis["expected_return"], analysis["target_profit"], analysis["stop_loss"], analysis["risk_reward_ratio"], str(analysis.get("edge_data", "{}"))
                     ))
                 
                 if results:
@@ -92,8 +93,8 @@ def run_eod_autopilot():
                             composite_score, intraday_score, swing_score,
                             smart_money_status, institutional_status, catalyst_status, trend_status, setup_type,
                             recommendation, intraday_recommendation, swing_recommendation,
-                            expected_return, target_profit, stop_loss, risk_reward_ratio
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            expected_return, target_profit, stop_loss, risk_reward_ratio, edge_data
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     cursor.executemany(sql, results)
                     conn.commit()

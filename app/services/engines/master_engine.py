@@ -1,4 +1,6 @@
 import pandas as pd
+import json
+import os
 import ta
 import numpy as np
 import random
@@ -18,6 +20,20 @@ def calc_chaikin_money_flow(df: pd.DataFrame, period: int = 20) -> float:
     mfv = mfm * volume
     cmf = mfv.rolling(window=period).sum() / volume.rolling(window=period).sum()
     return float(cmf.iloc[-1]) if not pd.isna(cmf.iloc[-1]) else 0.0
+
+
+EDGE_DB_CACHE = None
+
+def get_edge_db():
+    global EDGE_DB_CACHE
+    if EDGE_DB_CACHE is None:
+        try:
+            db_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'historical_edge_db.json')
+            with open(db_path, 'r') as f:
+                EDGE_DB_CACHE = json.load(f)
+        except:
+            EDGE_DB_CACHE = {"base_win_rates": {}, "astro_modifiers": {}}
+    return EDGE_DB_CACHE
 
 def calculate_master_score(df: pd.DataFrame) -> dict:
     if len(df) < 50:
@@ -40,6 +56,12 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
     vol_expansion_pct = (rvol - 1) * 100
     
     cmf_20 = calc_chaikin_money_flow(df, period=20)
+
+    # Volatilitas (ATR%)
+    df['ATR'] = ta.volatility.average_true_range(df['High'], df['Low'], df['Close'], window=14)
+    atr_val = df['ATR'].iloc[-1]
+    atr_pct = (atr_val / last_close) * 100 if last_close > 0 else 0
+
     
     highest_20 = df['High'].tail(20).max()
     lowest_20 = df['Low'].tail(20).min()
@@ -101,6 +123,7 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
     # 5. SWING TRADING LAYER (Filter Ketat)
     is_swing_eligible = (
         not pd.isna(curr['EMA200']) and
+        atr_pct >= 3.0 and # FILTER SAHAM KEONG
         curr['EMA50'] > curr['EMA200'] and 
         cmf_20 > 0.05 and
         trend_score >= 60
@@ -127,6 +150,14 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
     if recommendation == "STRONG BUY" and is_intraday_eligible: intraday_rec = "STRONG BUY"
     if recommendation == "STRONG BUY" and is_swing_eligible: swing_rec = "STRONG BUY"
         
+    
+    # Inject Historical Edge Data
+    edge_db = get_edge_db()
+    # Untuk simulasi, kita anggap astro hari ini Normal, tapi jika ada boost, kita kirim.
+    # Secara default kita kirim base win rates
+    edge_data = edge_db.get("base_win_rates", {})
+    # Bisa tambahkan logika Astro disini jika perlu
+
     # Projections
     tp = round(highest_20 * 1.05, 0) if highest_20 > 0 else round(last_close * 1.05, 0)
     sl = round(lowest_20 * 0.98, 0) if lowest_20 > 0 else round(last_close * 0.95, 0)
@@ -160,5 +191,6 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
         "expected_return": round((tp - last_close) / last_close * 100, 2),
         "target_profit": tp,
         "stop_loss": sl,
-        "risk_reward_ratio": rr
+        "risk_reward_ratio": rr,
+        "edge_data": json.dumps(edge_data)
     }

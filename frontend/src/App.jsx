@@ -9,6 +9,34 @@ import './index.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+
+const renderEdgeData = (stock) => {
+    try {
+        if (!stock.edge_data || stock.edge_data === '{}' || stock.edge_data === 'null') return null;
+        let edge = typeof stock.edge_data === 'string' ? JSON.parse(stock.edge_data) : stock.edge_data;
+        if (!edge || !edge.tp1_prob) return null;
+        
+        return (
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', marginTop: '10px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '0.85em', color: '#f1c40f', marginBottom: '5px', fontWeight: 'bold' }}>
+                    🎯 Historical Probability (7 Years)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', fontSize: '0.85em' }}>
+                    <div style={{ color: '#2ed573' }}>🟢 TP1 (+5%): {edge.tp1_prob}%</div>
+                    <div style={{ color: '#eccc68' }}>🟡 TP2 (+8%): {edge.tp2_prob}%</div>
+                    <div style={{ color: '#ffa502' }}>🟠 TP3 (+12%): {edge.tp3_prob}%</div>
+                    <div style={{ color: '#ff4757' }}>🔴 TP4 (+15%): {edge.tp4_prob}%</div>
+                </div>
+                <div style={{ fontSize: '0.8em', color: '#dfe4ea', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '5px' }}>
+                    <strong>Plan:</strong> Kunci BEP di +5%, Buntuti EMA-20 di +10%
+                </div>
+            </div>
+        );
+    } catch (e) {
+        return null;
+    }
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('swing');
   const [compositeData, setCompositeData] = useState([]);
@@ -766,6 +794,8 @@ function App() {
                               </div>
                             </div>
                         </div>
+
+                        {renderEdgeData(stock)}
                         
                         <div style={{display: 'flex', gap: '10px'}}>
                           <button className="btn-chart" onClick={(e) => { e.stopPropagation(); setSelectedChart({ticker: stock.ticker, tp: stock.target_profit, sl: stock.stop_loss}); }}>

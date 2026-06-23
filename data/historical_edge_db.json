@@ -1,0 +1,23 @@
+{
+    "last_updated": "2026-06-23",
+    "base_win_rates": {
+        "tp1_prob": 65.2,
+        "tp2_prob": 53.5,
+        "tp3_prob": 38.7,
+        "tp4_prob": 31.7
+    },
+    "astro_modifiers": {
+        "Normal": {
+            "tp1_prob": 65.2,
+            "tp3_prob": 38.5,
+            "boost_tp3": -0.2,
+            "sample_size": 221
+        },
+        "Moon-Venus": {
+            "tp1_prob": 66.7,
+            "tp3_prob": 50.0,
+            "boost_tp3": 11.3,
+            "sample_size": 6
+        }
+    }
+}

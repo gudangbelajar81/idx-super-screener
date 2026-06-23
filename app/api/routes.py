@@ -259,7 +259,10 @@ def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
         conn.close()
 
 @router.get("/api/scan/ninja")
-def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
+def scan_ninja(premium: bool = True, x_goapi_keys: str = Header(None)):
+    if x_goapi_keys:
+        import os
+        os.environ["GOAPI_KEYS"] = x_goapi_keys
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -517,7 +520,10 @@ def get_portfolio():
     return {"data": data}
 
 @router.post("/api/universe/build")
-def build_idx_universe(background_tasks: BackgroundTasks, x_goapi_key: str = Header(None)):
+def build_idx_universe(background_tasks: BackgroundTasks, x_goapi_keys: str = Header(None)):
+    if x_goapi_keys:
+        import os
+        os.environ["GOAPI_KEYS"] = x_goapi_keys
     """Endpoint untuk memulai sensus seluruh saham IDX di belakang layar"""
     from app.services.engines.universe_engine import set_status
     from app.worker.autopilot import run_eod_autopilot
@@ -872,7 +878,10 @@ def clear_all_watchlist():
 
 
 @router.get("/ai/xray/{ticker}")
-def get_ai_xray(ticker: str):
+def get_ai_xray(ticker: str, x_gemini_keys: str = Header(None)):
+    if x_gemini_keys:
+        import os
+        os.environ["GEMINI_API_KEYS"] = x_gemini_keys
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:

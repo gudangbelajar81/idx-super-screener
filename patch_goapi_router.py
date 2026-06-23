@@ -1,4 +1,10 @@
-import requests
+import os
+
+path = 'app/services/engines/goapi_engine.py'
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+new_content = '''import requests
 import os
 from datetime import datetime
 from app.core.key_router import APIKeyRouter
@@ -127,3 +133,9 @@ def get_broker_summary(ticker):
         "net_volume": 0,
         "avg_price": 0
     }
+'''
+
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print('goapi_engine.py patched with API Key Rotator')

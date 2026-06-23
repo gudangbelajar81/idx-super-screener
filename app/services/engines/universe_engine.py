@@ -53,6 +53,10 @@ def get_db_connection():
         )
 
 def build_universe(goapi_key: str = None):
+    from app.core.key_router import APIKeyRouter
+    import os
+    raw_keys = os.getenv("GOAPI_KEYS", os.getenv("GOAPI_KEY", goapi_key or ""))
+    goapi_router = APIKeyRouter(raw_keys)
     """
     Menjalankan sensus saham secara Background Task:
     - Menggunakan GoAPI jika goapi_key disediakan (Bypass blokir Yahoo)

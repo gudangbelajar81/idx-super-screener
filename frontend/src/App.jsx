@@ -74,14 +74,17 @@ function App() {
   const [newTicker, setNewTicker] = useState("");
   const [newMode, setNewMode] = useState("swing");
   const [serverKey, setServerKey] = useState(localStorage.getItem('SERVER_API_KEY') || "");
-  const [goapiKey, setGoapiKey] = useState(localStorage.getItem('GOAPI_KEY') || "");
+  const [goapiKeys, setGoapiKeys] = useState(localStorage.getItem('GOAPI_KEYS') || "");
+  const [geminiKeys, setGeminiKeys] = useState(localStorage.getItem('GEMINI_KEYS') || "");
 
   useEffect(() => {
     if (serverKey) axios.defaults.headers.common['X-API-Key'] = serverKey;
-    if (goapiKey) axios.defaults.headers.common['X-GoAPI-Key'] = goapiKey;
+    if (goapiKeys) axios.defaults.headers.common['X-GoAPI-Keys'] = goapiKeys;
+    if (geminiKeys) axios.defaults.headers.common['X-Gemini-Keys'] = geminiKeys;
     localStorage.setItem('SERVER_API_KEY', serverKey);
-    localStorage.setItem('GOAPI_KEY', goapiKey);
-  }, [serverKey, goapiKey]);
+    localStorage.setItem('GOAPI_KEYS', goapiKeys);
+    localStorage.setItem('GEMINI_KEYS', geminiKeys);
+  }, [serverKey, goapiKeys, geminiKeys]);
 
   // Engine Status Tracker
   const [engineStatus, setEngineStatus] = useState('idle');

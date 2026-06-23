@@ -85,7 +85,7 @@ def delete_watchlist(id: int, api_key: str = Depends(verify_api_key)):
         conn.close()
 
 @router.post("/api/sensus")
-def trigger_sensus(api_key: str = Depends(verify_api_key)):
+def trigger_sensus(background_tasks: BackgroundTasks, api_key: str = Depends(verify_api_key)):
     """
     Menjalankan proses Sensus Emiten Pilihan.
     Menghapus watchlist lama, dan memasukkan saham-saham pilihan yang lolos sensor ketat.
@@ -110,7 +110,11 @@ def trigger_sensus(api_key: str = Depends(verify_api_key)):
             
             conn.commit()
             
-        return {"message": f"Sensus Selesai! {len(curated_tickers)} saham super dimasukkan ke Screener.", "count": len(curated_tickers)}
+        # Trigger EOD Autopilot secara otomatis di background setelah Sensus selesai
+        from app.worker.autopilot import run_eod_autopilot
+        background_tasks.add_task(run_eod_autopilot)
+            
+        return {"message": f"Sensus Selesai! {len(curated_tickers)} saham super dimasukkan ke Screener. Mesin VIP (Autopilot) sedang memproses sinyal di belakang layar, tunggu 1-2 menit lalu klik 'Mulai Pemindaian VIP'!", "count": len(curated_tickers)}
     finally:
         conn.close()
 

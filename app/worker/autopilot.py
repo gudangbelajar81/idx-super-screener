@@ -20,6 +20,7 @@ def run_eod_autopilot():
     try:
         with conn.cursor() as cursor:
             cursor.execute('''
+                DROP TABLE IF EXISTS idx_master;
                 CREATE TABLE IF NOT EXISTS idx_master (
                     ticker VARCHAR(10) PRIMARY KEY, sector VARCHAR(50), close_price FLOAT, avg_value FLOAT, avg_volatility FLOAT,
                     relative_strength_score INT, smart_money_score INT, institutional_score INT, catalyst_score INT,

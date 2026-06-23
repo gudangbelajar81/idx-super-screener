@@ -183,22 +183,12 @@ def get_candidates(mode: str):
     try:
         with conn.cursor() as cursor:
             if category == 'NINJA':
-                cursor.execute("SELECT ticker FROM watchlists WHERE mode='scalp'")
+                cursor.execute("SELECT ticker FROM idx_universe WHERE category='NINJA'")
                 rows = cursor.fetchall()
                 if not rows:
-                    return {"data": [], "message": "Daftar Pantauan Kosong. Silakan klik 'Jalankan Sensus Master' terlebih dahulu."}
+                    return {"data": [], "message": "Belum ada sensus."}
                 
-                tickers = [r['ticker'] for r in rows]
-                results = []
-                for t in tickers:
-                    results.append({
-                        "ticker": t.replace('.JK', ''),
-                        "price": 0,
-                        "liquidity": 0,
-                        "signal": False,
-                        "status": "KANDIDAT MENTAH",
-                        "reason": "Menunggu Pemindaian VIP..."
-                    })
+                results = [{"ticker": r['ticker'], "price": 0, "status": "KANDIDAT MENTAH"} for r in rows]
                 return {"data": results, "message": "Candidates loaded"}
             else:
                 return {"data": [], "message": "Not used for Swing/Position"}
@@ -272,7 +262,7 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM watchlists WHERE mode='scalp'")
+            cursor.execute("SELECT ticker FROM idx_universe WHERE category='NINJA'")
             scalp_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()

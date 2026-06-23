@@ -589,7 +589,7 @@ function App() {
         )}
         <header className="header">
           <h1>
-            {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Trading AI' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'none' ? 'Radar Paus (Whale Tracker)' : activeTab === 'none' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
+            {activeTab === 'home' ? 'Ultimate Command Center' : ['intraday', 'swing'].includes(activeTab) ? 'Master Trading AI' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
           </h1>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
 
@@ -779,7 +779,7 @@ function App() {
 
 
             {/* Master Sensus & Sub Navbar untuk Menu IDX */}
-            {['swing', 'kavaleri', 'ninja'].includes(activeTab) && (
+            {['intraday', 'swing'].includes(activeTab) && (
               <>
                 <div className="universe-builder-card" style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 12, marginBottom: 20, border: '1px solid var(--border-subtle)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
@@ -881,7 +881,7 @@ function App() {
             <div className="results-container">
               <div className="scanner-header" style={{ justifyContent: 'space-between' }}>
                 <div style={{display: 'flex', gap: '10px'}}>
-                  {['swing', 'ninja', 'kavaleri'].includes(activeTab) && (
+                  {['intraday', 'swing'].includes(activeTab) && (
                     <>
                       <button className={`btn-toggle ${viewMode === 'cards' ? 'active' : ''}`} onClick={() => setViewMode('cards')} style={{ padding: '8px 12px', background: viewMode === 'cards' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'cards' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>💳 Cards</button>
                       <button className={`btn-toggle ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} style={{ padding: '8px 12px', background: viewMode === 'table' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'table' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>📄 Table</button>
@@ -913,7 +913,7 @@ function App() {
                 </div>
               </div>
 
-              {viewMode === 'table' && ['swing', 'ninja', 'kavaleri'].includes(activeTab) ? (
+              {viewMode === 'table' && ['intraday', 'swing'].includes(activeTab) ? (
                 renderTable()
               ) : (
                 <div className="stock-grid">

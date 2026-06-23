@@ -715,7 +715,6 @@ function App() {
                       </button>
                     )}
                   </div>
-                </div>
                 <div style={{display:'flex', gap:'10px', alignItems: 'center'}}>
                   <button className="btn-scan" onClick={handleScan} disabled={loading} style={{background: 'var(--color-green)', color: 'black'}}>
                     {loading ? <div className="loader"></div> : <Search size={18} />}

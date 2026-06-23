@@ -77,7 +77,7 @@ def run_eod_autopilot():
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM idx_signals WHERE mode IN ('position', 'swing')")
             
-pos_count = 0
+            pos_count = 0
             for res in position_results:
                 if res.get('signal'):
                     cursor.execute("""

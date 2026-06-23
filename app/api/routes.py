@@ -921,15 +921,16 @@ def get_api_keys():
             keys = []
             for r in results:
                 # Sembunyikan sebagian key untuk keamanan UI
-                masked_key = r[3][:6] + "..." + r[3][-4:] if len(r[3]) > 10 else "***"
+                raw_key = r['api_key']
+                masked_key = raw_key[:6] + "..." + raw_key[-4:] if len(raw_key) > 10 else "***"
                 keys.append({
-                    "id": r[0],
-                    "provider": r[1],
-                    "name": r[2],
+                    "id": r['id'],
+                    "provider": r['provider'],
+                    "name": r['name'],
                     "api_key_masked": masked_key,
-                    "base_url": r[4],
-                    "status": r[5],
-                    "used_count": r[6]
+                    "base_url": r['base_url'],
+                    "status": r['status'],
+                    "used_count": r['used_count']
                 })
             return {"status": "success", "data": keys}
     finally:

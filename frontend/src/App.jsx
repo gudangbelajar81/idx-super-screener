@@ -456,7 +456,7 @@ function App() {
   const currentData = activeTab === 'swing' ? swingData : activeTab === 'intraday' ? ninjaData : activeTab === 'none' ? kavaleriData : whaleData;
 
   const totalScanned = currentData.length;
-  const totalSignals = currentData.filter(d => d.signal).length;
+  const totalSignals = currentData.filter(d => d.composite_score > 60).length;
   const winRate = totalScanned ? Math.round((totalSignals / totalScanned) * 100) : 0;
 
   // Sorting Logic

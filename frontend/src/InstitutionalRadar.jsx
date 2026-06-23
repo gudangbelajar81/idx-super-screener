@@ -27,7 +27,6 @@ const InstitutionalRadar = ({ apiKey }) => {
   }, []);
 
   const startScan = async () => {
-    if (!apiKey) return alert("Masukkan API Key (Kata Sandi) di bagian atas layar.");
     setScanning(true);
     try {
       const res = await axios.post(`${API_BASE}/api/institutional/build`, {}, {

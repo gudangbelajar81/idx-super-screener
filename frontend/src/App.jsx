@@ -620,7 +620,7 @@ function App() {
       {/* Main Content */}
       <main className="main-content">
         {/* Macro Panel di Top */}
-        {activeTab !== 'home' && activeTab !== 'settings' && activeTab !== 'portfolio' && activeTab !== 'global' && (
+        {activeTab !== 'home' && activeTab !== 'settings' && activeTab !== 'portfolio' && activeTab !== 'global' && activeTab !== 'institutional' && activeTab !== 'news' && (
           <div className="macro-panel" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: 0, padding: '12px 24px', margin: 0, background: 'rgba(255,255,255,0.02)' }}>
             <div className="macro-left">
               <Globe size={16} />
@@ -672,6 +672,24 @@ function App() {
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '10px', color: '#aaa' }} />
               {xrayLoading && <div className="loader" style={{ position: 'absolute', right: '12px', top: '8px', width: '14px', height: '14px', borderWidth: '2px' }}></div>}
             </form>
+            
+            {/* Input rahasia untuk Server API Key */}
+            <input 
+              type="password" 
+              placeholder="Kata Sandi Utama..." 
+              value={serverKey}
+              onChange={(e) => setServerKey(e.target.value)}
+              title="Masukkan API Secret Key untuk membuka fitur premium"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                outline: 'none',
+                width: '180px'
+              }}
+            />
             <Bell size={20} color="var(--text-muted)" />
             <div style={{ width: 24, height: 24, background: 'var(--color-green)', borderRadius: '50%' }}></div>
           </div>
@@ -745,7 +763,7 @@ function App() {
           </div>
         )}
 
-        {activeTab !== 'home' && activeTab !== 'settings' && activeTab !== 'portfolio' && activeTab !== 'global' && (
+        {activeTab !== 'home' && activeTab !== 'settings' && activeTab !== 'portfolio' && activeTab !== 'global' && activeTab !== 'institutional' && activeTab !== 'news' && (
           <div className="scan-view">
 
 

@@ -63,6 +63,7 @@ def generate_xray_analysis(stock_data: dict) -> str:
        - Jelaskan kenapa SL1 dipasang di {sl1} (sebagai batas toleransi swing trader normal).
        - Jelaskan kekuatan SL2 di {sl2}. Banggakan fakta bahwa level {sl2} sudah diuji sebanyak {sl2_uji}x sehingga ini adalah benteng pertahanan terakhir yang sangat kokoh.
     4. 🎯 **Strategi Eksekusi**: Jelaskan di harga berapa sebaiknya *entry*, di mana TP-nya, dan pastikan Bos tahu kapan harus memotong kerugian tanpa ragu.
+    5. 🌐 **Sebab-Akibat (Korelasi)**: Jelaskan secara singkat logika mengapa saham ini berpotensi naik/mendapat sentimen positif (misal: akibat harga energi dunia naik, rotasi sektor, sentimen makro, atau inflow asing). Jelaskan dengan narasi sebab-akibat yang masuk akal bagi pengusaha.
     
     Ingat: Jangan berikan disclaimer basi seperti "ini bukan saran keuangan". Bos sudah tahu risikonya. Langsung ke intinya saja! Gunakan format Markdown (bold, bullet) agar elegan.
     """

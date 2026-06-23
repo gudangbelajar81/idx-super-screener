@@ -86,7 +86,9 @@ const XRayModal = ({ data, onClose }) => {
               <h4 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '13px', textTransform: 'uppercase' }}>📊 Swing (Daily)</h4>
               <p style={{ margin: '0 0 4px 0', color: '#aaa', fontSize: '13px' }}>Status: <strong style={{color: getStatusColor(daily.signal)}}>{daily.signal ? 'Uptrend' : 'Downtrend'}</strong></p>
               <p style={{ margin: '0 0 4px 0', color: '#aaa', fontSize: '13px' }}>CMF (Arus Uang): <strong>{daily.cmf}</strong></p>
-              <p style={{ margin: 0, color: '#aaa', fontSize: '13px' }}>TP/SL: <strong>{daily.tp ? `Rp ${daily.tp}` : '-'} / {daily.sl ? `Rp ${daily.sl}` : '-'}</strong></p>
+              <p style={{ margin: '0 0 4px 0', color: '#aaa', fontSize: '13px' }}>TP: <strong>{daily.tp ? `Rp ${daily.tp.toLocaleString('id-ID')}` : '-'}</strong></p>
+              <p style={{ margin: '0 0 4px 0', color: '#aaa', fontSize: '13px' }}>SL 1 (Terdekat): <strong>{daily.sl ? `Rp ${daily.sl.toLocaleString('id-ID')}` : '-'}</strong></p>
+              <p style={{ margin: 0, color: '#aaa', fontSize: '13px' }}>SL 2 (Kuat): <strong>{daily.sl2 ? `Rp ${daily.sl2.toLocaleString('id-ID')}` : '-'}</strong> {daily.sl2_uji ? <span style={{fontSize: '11px', color: '#ffb300'}}>(Diuji {daily.sl2_uji}x)</span> : null}</p>
             </div>
 
             {/* Ninja 5m */}

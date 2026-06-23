@@ -44,40 +44,46 @@ def _get_bulk_yf_history(tickers_tuple, period, interval):
         'Accept-Language': 'en-US,en;q=0.5'
     })
     
+    result = {}
+    
+    if len(tickers) == 1:
+        # Unduh 1 ticker tanpa group_by agar tidak ada MultiIndex
+        t = tickers[0]
+        try:
+            df = yf.download(t, period=period, interval=interval, threads=True, progress=False, session=session)
+            if df is not None and not df.empty:
+                if df.index.tz is not None:
+                    df.index = df.index.tz_localize(None)
+                df = df.dropna()
+                result[t] = df
+        except Exception as e:
+            print(f"Error parse YF data {t}: {e}")
+        return result
+        
     try:
-        data = yf.download(tickers, period=period, interval=interval, threads=True, progress=False, session=session)
+        data = yf.download(tickers, period=period, interval=interval, group_by='ticker', threads=True, progress=False, session=session)
     except Exception as e:
         print(f"Gagal bulk download YF: {e}")
         return {}
         
-    data_dict = {}
     if data is None or data.empty:
         print("[Bulk Fetch] Warning: Data kosong dari Yahoo Finance.")
         return {}
         
-    for ticker in tickers:
+    for t in tickers:
         try:
-            if len(tickers) == 1:
-                df = data.ffill().fillna(0)
-                df = df[df['Close'] > 0]
-            else:
-                # Pastikan format data adalah MultiIndex (kolom, ticker)
-                if isinstance(data.columns, pd.MultiIndex):
-                    df = pd.DataFrame({
-                        'Open': data['Open'][ticker],
-                        'High': data['High'][ticker],
-                        'Low': data['Low'][ticker],
-                        'Close': data['Close'][ticker],
-                        'Volume': data['Volume'][ticker]
-                    }).ffill().fillna(0)
-                    df = df[df['Close'] > 0] # Hanya ambil data yang valid
-                else:
-                    df = pd.DataFrame()
-            if not df.empty:
-                data_dict[ticker] = df
+            # Karena group_by='ticker', kita langsung akses data[t]
+            if t in data.columns.levels[0]:
+                df = data[t].copy()
+                if df.index.tz is not None:
+                    df.index = df.index.tz_localize(None)
+                df = df.dropna()
+                if not df.empty:
+                    result[t] = df
         except Exception as e:
-            pass
-    return data_dict
+            print(f"Error parse YF data {t}: {e}")
+            
+    return result
 
 def _apply_goapi_bulk_prices(data_dict, goapi_key):
     tickers = list(data_dict.keys())

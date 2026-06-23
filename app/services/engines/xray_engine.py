@@ -76,7 +76,9 @@ def run_xray_scan(ticker: str):
     # 7. Buat Laporan Mentor
     mentor_text = generate_mentor_advice(ticker_clean, daily_res, intraday_res, news_res, macro_res, broker_res)
 
-    return {
+    from app.services.advanced.utils import sanitize_for_json
+    
+    return sanitize_for_json({
         "ticker": ticker_clean,
         "price": float(last_price),
         "daily": daily_res,
@@ -84,4 +86,4 @@ def run_xray_scan(ticker: str):
         "news": news_res,
         "broker": broker_res,
         "mentor_advice": mentor_text
-    }
+    })

@@ -36,3 +36,27 @@ def calibrated_probability_from_score(score: float) -> float:
 def clamp(value: float, lower: float = -1.0, upper: float = 1.0) -> float:
     """Helper function to clamp values."""
     return max(lower, min(upper, value))
+
+import pandas as pd
+import numpy as np
+
+def sanitize_for_json(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(v) for v in obj]
+    elif isinstance(obj, (pd.Series, pd.DataFrame)):
+        return sanitize_for_json(obj.to_dict())
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return sanitize_for_json(obj.tolist())
+    elif pd.isna(obj):
+        return None
+    return obj

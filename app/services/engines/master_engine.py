@@ -5,6 +5,7 @@ import ta
 import numpy as np
 import random
 from .technical_engine import calculate_sr_zones
+from app.services.advanced.utils import sanitize_for_json
 
 def calc_vwap(df: pd.DataFrame) -> pd.Series:
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
@@ -222,5 +223,5 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
         "target_profit": tp,
         "stop_loss": sl,
         "risk_reward_ratio": rr,
-        "edge_data": json.dumps(edge_data)
+        "edge_data": json.dumps(sanitize_for_json(edge_data))
     }

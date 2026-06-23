@@ -511,7 +511,8 @@ def xray_ticker(ticker: str):
         res = run_xray_scan(ticker)
         return {"data": res}
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        return {"error": traceback.format_exc()}
 
 @router.get("/api/portfolio")
 def get_portfolio():
@@ -953,8 +954,8 @@ def add_api_key(item: APIKeyItem):
             conn.commit()
             return {"status": "success", "message": "API Key berhasil ditambahkan"}
     except Exception as e:
-        if 'Duplicate' in str(e):
-            raise HTTPException(status_code=400, detail="API Key sudah terdaftar")
+        if 'Duplicate' in str(e) or 'Duplicate entry' in str(e):
+            raise HTTPException(status_code=400, detail="API Key sudah terdaftar. Jika statusnya limit/mati, silakan gunakan tombol Reset di tabel.")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

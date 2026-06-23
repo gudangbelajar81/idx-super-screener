@@ -673,23 +673,7 @@ function App() {
               {xrayLoading && <div className="loader" style={{ position: 'absolute', right: '12px', top: '8px', width: '14px', height: '14px', borderWidth: '2px' }}></div>}
             </form>
             
-            {/* Input rahasia untuk Server API Key */}
-            <input 
-              type="password" 
-              placeholder="Kata Sandi Utama..." 
-              value={serverKey}
-              onChange={(e) => setServerKey(e.target.value)}
-              title="Masukkan API Secret Key untuk membuka fitur premium"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                outline: 'none',
-                width: '180px'
-              }}
-            />
+
             <Bell size={20} color="var(--text-muted)" />
             <div style={{ width: 24, height: 24, background: 'var(--color-green)', borderRadius: '50%' }}></div>
           </div>
@@ -1100,7 +1084,29 @@ function App() {
               <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
                 Masukkan kunci rahasia agar aplikasi Vercel ini bisa membuka gembok server dan menarik data premium. Tersimpan aman di memori browser Anda.
               </p>
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', flexDirection: 'column' }}>
+                <div style={{ background: 'var(--bg-dark)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: 'var(--color-blue)' }}>Kunci Server (Akses Utama)</h4>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 10 }}>
+                    Kata sandi untuk mengakses backend server milik Anda sendiri.
+                  </p>
+                  <input 
+                    type="password" 
+                    placeholder="Kata Sandi Utama..." 
+                    value={serverKey}
+                    onChange={(e) => setServerKey(e.target.value)}
+                    className="input-field"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      background: 'rgba(255,255,255,0.05)',
+                      color: 'white',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  />
+                </div>
+                
                 <div style={{ flex: 1, minWidth: 250 }}>
                   <ApiKeysDashboard />
                 </div>

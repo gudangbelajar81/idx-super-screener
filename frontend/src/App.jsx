@@ -889,12 +889,11 @@ function App() {
               </p>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 250 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--color-green)' }}>Kunci Server (X-API-Key)</label>
-                  <input type="password" value={serverKey} onChange={e => setServerKey(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="Masukkan Kunci Server" />
-                </div>
-                <div style={{ flex: 1, minWidth: 250 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--color-blue)' }}>Kunci Provider (GoAPI VIP)</label>
-                  <input type="password" value={goapiKey} onChange={e => setGoapiKey(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="Masukkan Kunci GoAPI" />
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 13, color: 'var(--color-blue)' }}>Kunci Provider (GoAPI VIP - Pisahkan dengan koma)</label>
+              <input type="password" value={goapiKeys} onChange={e => setGoapiKeys(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="key1,key2,key3..." />
+              
+              <label style={{ display: 'block', marginTop: 15, marginBottom: 6, fontSize: 13, color: '#9b59b6' }}>Kunci AI X-Ray (Gemini - Pisahkan dengan koma)</label>
+              <input type="password" value={geminiKeys} onChange={e => setGeminiKeys(e.target.value)} className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-subtle)' }} placeholder="key1,key2,key3..." />
                 </div>
               </div>
             </div>

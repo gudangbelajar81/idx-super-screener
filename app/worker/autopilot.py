@@ -17,6 +17,17 @@ def run_eod_autopilot():
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS idx_master (
+                    ticker VARCHAR(10) PRIMARY KEY, sector VARCHAR(50), close_price FLOAT, avg_value FLOAT, avg_volatility FLOAT,
+                    relative_strength_score INT, smart_money_score INT, institutional_score INT, catalyst_score INT,
+                    composite_score INT, intraday_score INT, swing_score INT,
+                    smart_money_status VARCHAR(50), institutional_status VARCHAR(50), catalyst_status VARCHAR(50), trend_status VARCHAR(50), setup_type VARCHAR(50),
+                    recommendation VARCHAR(20), intraday_recommendation VARCHAR(20), swing_recommendation VARCHAR(20),
+                    expected_return FLOAT, target_profit FLOAT, stop_loss FLOAT, risk_reward_ratio FLOAT,
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            ''')
             # Kita tidak menghapus tabel, tapi REPLACE INTO atau bersihkan data lama
             cursor.execute("TRUNCATE TABLE idx_master")
         conn.commit()

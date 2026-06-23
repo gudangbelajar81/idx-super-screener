@@ -63,7 +63,14 @@ const ApiKeysDashboard = () => {
   }, []);
 
   const handleAdd = async () => {
-    if (!name || !apiKey) return;
+    if (!name) {
+      alert("Harap isi 'Nama Akun' terlebih dahulu! Bebas saja, misal 'Utama' atau 'Cadangan'.");
+      return;
+    }
+    if (!apiKey) {
+      alert("Harap masukkan API Key!");
+      return;
+    }
     setLoading(true);
     try {
       await axios.post('/api/keys', { provider, name, api_key: apiKey, base_url: baseUrl });

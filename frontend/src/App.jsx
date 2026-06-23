@@ -25,6 +25,7 @@ function App() {
   const [ipoNews, setIpoNews] = useState([]);
   const [ipoLoading, setIpoLoading] = useState(false);
   const [buildingUniverse, setBuildingUniverse] = useState(false);
+  const [autoSensusInterval, setAutoSensusInterval] = useState(0); // 0 means manual
   const [selectedStock, setSelectedStock] = useState(null);
   const [portfolioData, setPortfolioData] = useState([]);
   const [selectedChart, setSelectedChart] = useState(null);
@@ -183,8 +184,8 @@ function App() {
     }
   };
 
-  const buildUniverse = async () => {
-    if (!window.confirm("Proses Sensus Saham membutuhkan waktu sekitar 1-2 menit. Jalankan di latar belakang?")) return;
+  const buildUniverse = async (isAuto = false) => {
+    if (isAuto !== true && !window.confirm("Proses Sensus Saham membutuhkan waktu sekitar 1-2 menit. Jalankan di latar belakang?")) return;
     setBuildingUniverse(true);
     startEngineTracking('sensus');
     try {
@@ -292,6 +293,20 @@ function App() {
   }, [swingData, intradayData, whaleData, globalData]);
 
   
+  // Auto-Sensus Effect
+  useEffect(() => {
+    let sensusTimer;
+    if (autoSensusInterval > 0) {
+      sensusTimer = setInterval(() => {
+        if (!buildingUniverse) {
+          console.log(`Auto-Sensus berjalan (${autoSensusInterval / 60000} menit)...`);
+          buildUniverse(true); // isAuto = true
+        }
+      }, autoSensusInterval);
+    }
+    return () => clearInterval(sensusTimer);
+  }, [autoSensusInterval, buildingUniverse]);
+
   // Live Radar Effect (Auto Scan every 3 mins for Scalping)
   useEffect(() => {
     let radarTimer;
@@ -627,8 +642,6 @@ function App() {
                 </div>
               </div>
             </div>
-
-
             {/* Master Sensus & Sub Navbar untuk Menu IDX */}
             {['intraday', 'swing'].includes(activeTab) && (
               <>
@@ -642,18 +655,36 @@ function App() {
                         Menyaring seluruh bursa IDX (~800 saham) menggunakan algoritma gratisan (Yahoo Finance) untuk menemukan "Kandidat Saham" potensial. Jalankan ini secara berkala sebelum menekan tombol Scan di bawah.
                       </p>
                     </div>
-                    <button
-                      className="btn-scan"
-                      onClick={buildUniverse}
-                      disabled={buildingUniverse}
-                      style={{ background: 'linear-gradient(135deg, var(--color-green), #00b894)', color: 'black', fontWeight: 700, minWidth: 200, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      {buildingUniverse ? (
-                        <><div className="loader" style={{width:14,height:14,borderWidth:2}}></div> Sedang Sensus...</>
-                      ) : (
-                        <><Globe size={16} /> Jalankan Sensus Master</>
-                      )}
-                    </button>
+                    
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <select
+                        value={autoSensusInterval}
+                        onChange={(e) => setAutoSensusInterval(Number(e.target.value))}
+                        style={{
+                          background: '#1e1e1e', color: 'white', border: '1px solid #333', 
+                          padding: '10px 14px', borderRadius: 8, fontSize: '0.9rem', outline: 'none', cursor: 'pointer'
+                        }}
+                      >
+                        <option value={0}>🔴 Manual (Off)</option>
+                        <option value={300000}>⚡ 5 Menit</option>
+                        <option value={600000}>⏱️ 10 Menit</option>
+                        <option value={900000}>⏳ 15 Menit</option>
+                        <option value={1800000}>🕰️ 30 Menit</option>
+                      </select>
+
+                      <button
+                        className="btn-scan"
+                        onClick={() => buildUniverse(false)}
+                        disabled={buildingUniverse}
+                        style={{ background: 'linear-gradient(135deg, var(--color-green), #00b894)', color: 'black', fontWeight: 700, minWidth: 200, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        {buildingUniverse ? (
+                          <><div className="loader" style={{width:14,height:14,borderWidth:2}}></div> Sedang Sensus...</>
+                        ) : (
+                          <><Globe size={16} /> Jalankan Sensus Master</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

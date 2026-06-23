@@ -167,6 +167,28 @@ def trigger_sensus_kavaleri(api_key: str = Depends(verify_api_key)):
     finally:
         conn.close()
 
+@router.post("/api/institutional/build")
+def trigger_institutional_sensus(background_tasks: BackgroundTasks, api_key: str = Depends(verify_api_key)):
+    """Menjalankan engine pencarian narasi institusional di background"""
+    from app.services.engines.institutional_engine import run_institutional_scan
+    background_tasks.add_task(run_institutional_scan)
+    return {"message": "Mesin Institutional Narrative mulai berburu data. Silakan tunggu beberapa menit dan refresh halaman Radar Institusi."}
+
+@router.get("/api/institutional/candidates")
+def get_institutional_candidates():
+    """Mengambil hasil dari tabel institutional_candidates"""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM institutional_candidates ORDER BY composite_score DESC")
+            rows = cursor.fetchall()
+            return {"data": rows, "message": "Success"}
+    except Exception as e:
+        print(f"DB Error institutional_candidates: {e}")
+        return {"data": [], "message": str(e)}
+    finally:
+        conn.close()
+
 @router.get("/api/news/ipo")
 def get_ipo_radar():
     """

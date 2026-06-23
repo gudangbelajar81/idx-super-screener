@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { LayoutDashboard, TrendingUp, Zap, Activity, Settings, Bell, Search, BarChart2, Trash2, Plus, Globe } from 'lucide-react';
 import ChartModal from './ChartModal';
 import XRayModal from './XRayModal';
+import InstitutionalRadar from './InstitutionalRadar';
 import TradingChart from './components/TradingChart';
 import CalculatorModal from './CalculatorModal';
 import './index.css';
@@ -600,6 +601,10 @@ function App() {
             <LayoutDashboard size={18} />
             Master Trading AI
           </li>
+          <li className={`sidebar-item ${activeTab === 'institutional' ? 'active' : ''}`} onClick={() => setActiveTab('institutional')}>
+            <Globe size={18} />
+            Radar Institusi
+          </li>
           <li className={`sidebar-item ${activeTab === 'portfolio' ? 'active' : ''}`} onClick={() => setActiveTab('portfolio')}>
             <BarChart2 size={18} />
             Portofolio Robot
@@ -1150,6 +1155,10 @@ function App() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {activeTab === 'institutional' && (
+          <InstitutionalRadar apiKey={apiKey} />
         )}
         
         {activeTab === 'news' && (

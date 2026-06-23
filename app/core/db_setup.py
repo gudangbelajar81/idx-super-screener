@@ -100,11 +100,31 @@ def setup_database():
             ]
             sql = "INSERT IGNORE INTO watchlists (ticker, mode) VALUES (%s, %s)"
             cursor.executemany(sql, initial_data)
-        
+            
+            # 7. Tabel Institutional Candidates
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS institutional_candidates (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    ticker VARCHAR(20) NOT NULL UNIQUE,
+                    catalyst_score INT DEFAULT 0,
+                    growth_score INT DEFAULT 0,
+                    confirmation_score INT DEFAULT 0,
+                    composite_score INT DEFAULT 0,
+                    alasan_institusi TEXT,
+                    faktor_pertumbuhan TEXT,
+                    risiko_utama TEXT,
+                    expected_return_15d VARCHAR(50),
+                    expected_return_3m VARCHAR(50),
+                    confidence_score INT DEFAULT 0,
+                    rekomendasi VARCHAR(50),
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            """)
+            
         conn.commit()
         print("✅ Database siap untuk digunakan!")
     except Exception as e:
-        print(f"❌ Terjadi kesalahan setup DB: {e}")
+        print(f"[ERROR] Terjadi kesalahan setup DB: {e}")
     finally:
         if 'conn' in locals() and conn:
             conn.close()

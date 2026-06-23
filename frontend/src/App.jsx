@@ -211,12 +211,16 @@ function App() {
   const fetchCandidates = async (mode) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/candidates/${mode}`);
-      if (mode === 'swing') setSwingData(res.data.data);
-      else if (mode === 'kavaleri') setKavaleriData(res.data.data);
-      else if (mode === 'ninja') setNinjaData(res.data.data);
+      if (mode === 'swing' || mode === 'kavaleri') {
+        const res = await axios.get(${API_BASE}/api/scan/);
+        if (mode === 'swing') setSwingData(res.data.data);
+        else if (mode === 'kavaleri') setKavaleriData(res.data.data);
+      } else {
+        const res = await axios.get(${API_BASE}/api/candidates/);
+        setNinjaData(res.data.data);
+      }
     } catch (err) {
-      console.error('Fetch candidates error:', err);
+      console.error('Fetch error:', err);
     }
     setLoading(false);
   };

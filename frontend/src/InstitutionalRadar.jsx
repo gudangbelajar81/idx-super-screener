@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Target, Activity, ShieldAlert, ChevronDown, ChevronUp, PlayCircle, Info } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const InstitutionalRadar = ({ apiKey }) => {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ const InstitutionalRadar = ({ apiKey }) => {
   const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/institutional/candidates');
+      const res = await fetch(`${API_BASE}/api/institutional/candidates`);
       const data = await res.json();
       setCandidates(data.data || []);
     } catch (err) {
@@ -28,7 +30,7 @@ const InstitutionalRadar = ({ apiKey }) => {
     if (!apiKey) return alert("Masukkan API Key (Kata Sandi) di bagian atas layar.");
     setScanning(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/institutional/build', {
+      const res = await fetch(`${API_BASE}/api/institutional/build`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });

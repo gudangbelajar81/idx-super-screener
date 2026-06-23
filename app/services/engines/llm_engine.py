@@ -7,8 +7,10 @@ load_dotenv()
 
 # Inisialisasi Key Router (Baca dari GEMINI_API_KEYS yang dipisah koma)
 # Jika GEMINI_API_KEYS tidak ada, coba baca GEMINI_API_KEY (backward compatibility)
-raw_keys = os.getenv("GEMINI_API_KEYS", os.getenv("GEMINI_API_KEY", ""))
-gemini_router = APIKeyRouter(raw_keys)
+# Inisialisasi Key Router menggunakan Database
+gemini_router = APIKeyRouter('Gemini')
+openai_router = APIKeyRouter('OpenAI')
+custom_router = APIKeyRouter('Custom')
 
 def generate_xray_analysis(stock_data: dict) -> str:
     """
@@ -68,9 +70,12 @@ def generate_xray_analysis(stock_data: dict) -> str:
     Ingat: Jangan berikan disclaimer basi seperti "ini bukan saran keuangan". Bos sudah tahu risikonya. Langsung ke intinya saja! Gunakan format Markdown (bold, list) agar mudah dibaca.
     """
 
-    # Looping Rotasi API Key
+    # Looping Rotasi API Key (Gemini)
     while gemini_router.has_active_keys():
-        current_key = gemini_router.get_key()
+        current_key, base_url = gemini_router.get_key()
+        if not current_key:
+            break
+            
         try:
             genai.configure(api_key=current_key)
             model = genai.GenerativeModel('gemini-1.5-flash')
@@ -85,4 +90,5 @@ def generate_xray_analysis(stock_data: dict) -> str:
             else:
                 return f"❌ **Gagal menghubungi Otak AI (Gemini):** {str(e)}\n\nMungkin ada gangguan koneksi server."
 
-    return "❌ **Semua API Key Gemini telah mencapai limit (Habis Kuota).** Silakan tambahkan kunci baru di konfigurasi server."
+    # Todo: Jika Bos memilih Provider selain Gemini, bisa diimplementasikan menggunakan openai_router
+    return "❌ **Semua API Key Gemini telah mencapai limit atau belum disetel di Pusat API Key.**"

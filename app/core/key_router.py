@@ -1,47 +1,96 @@
-import os
+from app.core.database import get_db_connection
+from fastapi import HTTPException
 
 class APIKeyRouter:
-    def __init__(self, keys_string):
+    def __init__(self, provider: str):
         """
-        Inisialisasi Key Router.
-        keys_string: String berisi daftar API key dipisahkan dengan koma.
+        Inisialisasi Key Router menggunakan Database.
+        provider: 'GoAPI', 'Gemini', 'OpenAI', 'KieAI', dll.
         """
-        self.keys = []
-        if keys_string:
-            # Bersihkan spasi kosong
-            self.keys = [k.strip() for k in keys_string.split(',') if k.strip()]
-            
-        self.current_index = 0
-        self.dead_keys = set()
+        self.provider = provider
         
     def get_key(self):
         """
-        Mengambil kunci aktif yang masih berfungsi.
+        Mengambil satu kunci aktif (Alive) dari database.
+        Mencoba merotasi berdasarkan urutan terlama dipakai (last_used).
+        Mengembalikan tuple (api_key, base_url).
+        Jika gagal mengembalikan (None, None).
         """
-        if not self.keys:
-            return None
+        conn = get_db_connection()
+        if not conn:
+            return None, None
             
-        # Cari kunci yang belum mati, mulai dari index saat ini
-        start_index = self.current_index
-        while True:
-            key = self.keys[self.current_index]
-            if key not in self.dead_keys:
-                return key
+        try:
+            with conn.cursor() as cursor:
+                # Ambil 1 kunci yang statusnya Alive, diurutkan dari yang paling lama gak dipakai
+                sql = """
+                    SELECT id, api_key, base_url 
+                    FROM api_keys_manager 
+                    WHERE provider = %s AND status = 'Alive' 
+                    ORDER BY last_used ASC LIMIT 1
+                """
+                cursor.execute(sql, (self.provider,))
+                result = cursor.fetchone()
                 
-            self.current_index = (self.current_index + 1) % len(self.keys)
-            if self.current_index == start_index:
-                # Semua kunci sudah dicoba dan mati
-                return None
-                
-    def mark_dead(self, key):
+                if result:
+                    key_id, api_key, base_url = result
+                    
+                    # Update used_count dan last_used
+                    update_sql = """
+                        UPDATE api_keys_manager 
+                        SET used_count = used_count + 1, last_used = CURRENT_TIMESTAMP 
+                        WHERE id = %s
+                    """
+                    cursor.execute(update_sql, (key_id,))
+                    conn.commit()
+                    
+                    return api_key, base_url
+                else:
+                    return None, None
+        except Exception as e:
+            print(f"[Key Router] DB Error: {e}")
+            return None, None
+        finally:
+            conn.close()
+            
+    def mark_dead(self, api_key: str):
         """
-        Menandai sebuah kunci sebagai mati (misal karena Error 429 atau kuota habis).
+        Menandai kunci mati (Limit/Dead) di Database akibat Error 429.
         """
-        print(f"⚠️ [Key Router] API Key mati/limit ditandai: ...{key[-4:] if key else 'None'}")
-        self.dead_keys.add(key)
-        # Otomatis geser ke kunci berikutnya
-        if self.keys:
-            self.current_index = (self.current_index + 1) % len(self.keys)
+        if not api_key:
+            return
+            
+        conn = get_db_connection()
+        if not conn:
+            return
+            
+        try:
+            with conn.cursor() as cursor:
+                # Update status menjadi Limit
+                sql = "UPDATE api_keys_manager SET status = 'Limit' WHERE api_key = %s"
+                cursor.execute(sql, (api_key,))
+                conn.commit()
+                print(f"⚠️ [Key Router] Kunci ditandai Limit: ...{api_key[-4:] if api_key else ''}")
+        except Exception as e:
+            print(f"[Key Router] DB Error: {e}")
+        finally:
+            conn.close()
             
     def has_active_keys(self):
-        return len(self.dead_keys) < len(self.keys)
+        """
+        Mengecek apakah masih ada kunci Alive untuk provider ini.
+        """
+        conn = get_db_connection()
+        if not conn:
+            return False
+            
+        try:
+            with conn.cursor() as cursor:
+                sql = "SELECT COUNT(*) as count FROM api_keys_manager WHERE provider = %s AND status = 'Alive'"
+                cursor.execute(sql, (self.provider,))
+                result = cursor.fetchone()
+                return result and result[0] > 0
+        except:
+            return False
+        finally:
+            conn.close()

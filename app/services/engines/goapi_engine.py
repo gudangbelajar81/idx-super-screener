@@ -11,9 +11,7 @@ DEFAULT_GOAPI_KEY = "9801bcc5-9a0e-5762-08b8-178ad122"
 BASE_URL = "https://api.goapi.io/stock/idx"
 
 def get_goapi_router():
-    """Mengambil instance router untuk GoAPI setiap kali dipanggil, agar env selalu terupdate"""
-    raw_keys = os.getenv("GOAPI_KEYS", os.getenv("GOAPI_KEY", DEFAULT_GOAPI_KEY))
-    return APIKeyRouter(raw_keys)
+    return APIKeyRouter("GoAPI")
 
 def get_headers(api_key):
     return {
@@ -26,7 +24,7 @@ def get_goapi_price(ticker):
     router = get_goapi_router()
     
     while router.has_active_keys():
-        current_key = router.get_key()
+        current_key, _ = router.get_key()
         try:
             url = f"{BASE_URL}/prices?symbols={ticker}"
             res = requests.get(url, headers=get_headers(current_key), timeout=5)
@@ -64,7 +62,7 @@ def get_broker_summary(ticker):
     import datetime
     
     while router.has_active_keys():
-        current_key = router.get_key()
+        current_key, _ = router.get_key()
         try:
             # Coba tarik data hari ini mundur maksimal 5 hari (melewati weekend/libur)
             success = False

@@ -59,7 +59,22 @@ def setup_database():
                 )
             """)
 
-            # 5. Seeding Data Awal (Hanya jika kosong/baru)
+            # 6. Tabel Pusat API Key
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS api_keys_manager (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    provider VARCHAR(50) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    api_key VARCHAR(255) NOT NULL UNIQUE,
+                    base_url VARCHAR(255) DEFAULT '',
+                    status VARCHAR(20) DEFAULT 'Alive',
+                    used_count INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_used TIMESTAMP NULL
+                )
+            """)
+            
+            # Seeding Data Awal (Hanya jika kosong/baru)
             initial_data = [
                 ("BBCA.JK", "swing"), ("BBRI.JK", "swing"), ("BMRI.JK", "swing"), ("BBNI.JK", "swing"),
                 ("TLKM.JK", "swing"), ("ASII.JK", "swing"), ("UNVR.JK", "swing"), ("ICBP.JK", "swing"),

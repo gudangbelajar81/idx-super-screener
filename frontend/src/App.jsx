@@ -26,6 +26,7 @@ function App() {
   const [ipoLoading, setIpoLoading] = useState(false);
   const [buildingUniverse, setBuildingUniverse] = useState(false);
   const [autoSensusInterval, setAutoSensusInterval] = useState(0); // 0 means manual
+  const [showEliteOnly, setShowEliteOnly] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
   const [portfolioData, setPortfolioData] = useState([]);
   const [selectedChart, setSelectedChart] = useState(null);
@@ -319,7 +320,11 @@ function App() {
     return () => clearInterval(radarTimer);
   }, [liveRadar, activeTab]);
 
-  const currentData = activeTab === 'swing' ? swingData : activeTab === 'intraday' ? intradayData : whaleData;
+  const filteredSwingData = showEliteOnly 
+    ? swingData.filter(d => d.smart_money_score >= 80 && d.composite_score >= 75 && d.risk_reward_ratio <= 0.4)
+    : swingData;
+    
+  const currentData = activeTab === 'swing' ? filteredSwingData : activeTab === 'intraday' ? intradayData : whaleData;
 
   const totalScanned = currentData.length;
   const totalSignals = currentData.filter(d => d.composite_score > 60).length;
@@ -761,14 +766,28 @@ function App() {
 
             {/* Results Container */}
             <div className="results-container">
-              <div className="scanner-header" style={{ justifyContent: 'space-between' }}>
-                <div style={{display: 'flex', gap: '10px'}}>
-                  {['intraday', 'swing'].includes(activeTab) && (
-                    <>
-                      <button className={`btn-toggle ${viewMode === 'cards' ? 'active' : ''}`} onClick={() => setViewMode('cards')} style={{ padding: '8px 12px', background: viewMode === 'cards' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'cards' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>💳 Cards</button>
-                      <button className={`btn-toggle ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} style={{ padding: '8px 12px', background: viewMode === 'table' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'table' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>📄 Table</button>
-                    </>
-                  )}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, background: 'rgba(255,255,255,0.03)', padding: '12px 20px', borderRadius: 12, flexWrap: 'wrap', gap: 10}}>
+                  <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                    {['intraday', 'swing'].includes(activeTab) && (
+                      <>
+                        <button className={`btn-toggle ${viewMode === 'cards' ? 'active' : ''}`} onClick={() => setViewMode('cards')} style={{ padding: '8px 12px', background: viewMode === 'cards' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'cards' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>💳 Cards</button>
+                        <button className={`btn-toggle ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} style={{ padding: '8px 12px', background: viewMode === 'table' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: viewMode === 'table' ? 'black' : 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>📊 Table</button>
+                      </>
+                    )}
+                    {activeTab === 'swing' && (
+                      <button 
+                        onClick={() => setShowEliteOnly(!showEliteOnly)} 
+                        style={{ 
+                          padding: '8px 12px', 
+                          background: showEliteOnly ? 'linear-gradient(135deg, #f1c40f, #f39c12)' : 'rgba(255,255,255,0.1)', 
+                          color: showEliteOnly ? 'black' : 'white', 
+                          border: showEliteOnly ? '1px solid #f39c12' : 'none', 
+                          borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginLeft: '10px'
+                        }}>
+                        ⭐ {showEliteOnly ? 'Sembunyikan Elite Target' : 'Tampilkan Hanya Elite Target'}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div style={{display:'flex', gap:'10px', alignItems: 'center'}}>
                   {activeTab === 'intraday' && (

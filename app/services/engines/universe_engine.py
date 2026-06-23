@@ -183,7 +183,16 @@ def build_universe(goapi_key: str = None):
             cursor.executemany(sql, results)
         conn.commit()
         print(f"[Universe Builder] Sensus Selesai! {len(results)} saham diklasifikasikan.")
-        set_status("done", 100, "Sensus selesai!", total_tickers, len([r for r in results if r[1] != 'SAMPAH']))
+        set_status("running", 50, "Sensus selesai, memuat Mesin VIP...")
+        
+        # Trigger Autopilot untuk memindai hasil sensus
+        try:
+            from app.worker.autopilot import run_eod_autopilot
+            run_eod_autopilot()
+        except Exception as e:
+            print(f"[Universe Builder] Gagal menjalankan Autopilot: {e}")
+            set_status("error", 50, f"Autopilot gagal: {e}")
+            
     except Exception as e:
         print(f"[Universe Builder] Database Error: {e}")
         set_status("error", 0, f"Error Database: {e}")

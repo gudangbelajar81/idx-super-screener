@@ -127,20 +127,39 @@ def generate_institutional_narrative(ticker: str, growth_data: dict, conf_data: 
             else:
                 return {}
     return {}
+import json
+import os
+
+STATUS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "institutional_status.json")
+
+def set_institutional_status(status, progress, message):
+    try:
+        with open(STATUS_FILE, "w") as f:
+            json.dump({
+                "status": status,
+                "progress": progress,
+                "message": message
+            }, f)
+    except Exception as e:
+        print("Failed to write institutional status:", e)
 
 def run_institutional_scan():
     """
     Fungsi Utama. Memindai daftar saham unggulan, lalu menyimpan hasilnya ke database.
     """
     print("Mulai Pemindaian Institutional Narrative Engine...")
+    set_institutional_status("starting", 0, "Mempersiapkan Radar Institusi...")
     
     # Ambil 10 saham kapitalisasi besar sebagai proxy (agar tidak hit limit API)
     # Di masa depan, ini bisa disambung ke hasil Sensus Master
     target_tickers = ["BBCA", "BMRI", "BBNI", "BBRI", "TLKM", "ASII", "AMMN", "BRPT", "GOTO", "BREN"]
     
     results = []
+    total = len(target_tickers)
     
-    for ticker in target_tickers:
+    for i, ticker in enumerate(target_tickers):
+        progress = int((i / total) * 100)
+        set_institutional_status("running", progress, f"Menganalisis Fundamental & Narasi: {ticker}...")
         print(f"Menganalisis {ticker}...")
         try:
             ticker_jk = f"{ticker}.JK"
@@ -217,6 +236,10 @@ def run_institutional_scan():
                     r["confidence_score"], r["rekomendasi"]
                 ))
             conn.commit()
-            print("Radar Institusi berhasil diperbarui!")
+            print("Penyimpanan selesai!")
+            set_institutional_status("done", 100, f"Selesai! {len(results)} kandidat masuk radar.")
+    except Exception as e:
+        print("Database error saat menyimpan kandidat:", e)
+        set_institutional_status("error", 0, f"Gagal menyimpan data: {e}")
     finally:
         conn.close()

@@ -536,6 +536,19 @@ def xray_ticker(ticker: str):
         import traceback
         return {"error": traceback.format_exc()}
 
+@router.get("/api/institutional/status")
+def get_institutional_status():
+    """Mengambil status progres sensus institusional"""
+    import os, json
+    STATUS_FILE = os.path.join(os.path.dirname(__file__), "..", "institutional_status.json")
+    if not os.path.exists(STATUS_FILE):
+        return {"status": "idle", "progress": 0, "message": "Belum ada radar institusi yang berjalan"}
+    try:
+        with open(STATUS_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        return {"status": "error", "progress": 0, "message": f"Gagal membaca status: {e}"}
+
 @router.get("/api/portfolio")
 def get_portfolio():
     """Mengambil riwayat Paper Trading"""

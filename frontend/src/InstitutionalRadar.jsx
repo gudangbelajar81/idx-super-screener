@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const InstitutionalRadar = ({ apiKey }) => {
+const InstitutionalRadar = ({ apiKey, startEngineTracking, stopEngineTracking, setEngineMsg }) => {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -28,15 +28,38 @@ const InstitutionalRadar = ({ apiKey }) => {
 
   const startScan = async () => {
     setScanning(true);
+    if(startEngineTracking) startEngineTracking('institutional');
     try {
-      const res = await axios.post(`${API_BASE}/api/institutional/build`, {}, {
+      await axios.post(`${API_BASE}/api/institutional/build`, {}, {
         headers: { 'X-API-Key': apiKey }
       });
-      alert(res.data.message);
+      
+      const pollInterval = setInterval(async () => {
+        try {
+          const res = await axios.get(`${API_BASE}/api/institutional/status`);
+          const statusData = res.data;
+          
+          if (statusData.status === 'running' || statusData.status === 'starting') {
+            if(setEngineMsg) setEngineMsg(`${statusData.progress}% - ${statusData.message}`);
+          } else if (statusData.status === 'done') {
+            clearInterval(pollInterval);
+            setScanning(false);
+            if(stopEngineTracking) stopEngineTracking(true, `Sensus Institusi selesai!`);
+            fetchCandidates();
+          } else if (statusData.status === 'error') {
+            clearInterval(pollInterval);
+            setScanning(false);
+            if(stopEngineTracking) stopEngineTracking(false, `Gagal: ${statusData.message}`);
+          }
+        } catch (pollErr) {
+          console.error("Polling error", pollErr);
+        }
+      }, 3000);
+      
     } catch (err) {
-      alert("Gagal memulai sensus: " + err);
+      if(stopEngineTracking) stopEngineTracking(false, "Gagal memulai mesin institusi");
+      setScanning(false);
     }
-    setScanning(false);
   };
 
   const getScoreColor = (score) => {

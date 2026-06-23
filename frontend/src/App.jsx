@@ -1182,7 +1182,7 @@ function App() {
         )}
 
         {activeTab === 'institutional' && (
-          <InstitutionalRadar apiKey={serverKey} />
+          <InstitutionalRadar apiKey={serverKey} startEngineTracking={startEngineTracking} stopEngineTracking={stopEngineTracking} setEngineMsg={setEngineMsg} />
         )}
         
         {activeTab === 'news' && (

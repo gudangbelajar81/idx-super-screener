@@ -49,7 +49,7 @@ const ApiKeysDashboard = () => {
 
   const fetchKeys = async () => {
     try {
-      const res = await axios.get('/api/keys');
+      const res = await axios.get(`${API_BASE}/api/keys`);
       if (res.data.status === 'success') {
         setKeys(res.data.data);
       }
@@ -73,7 +73,7 @@ const ApiKeysDashboard = () => {
     }
     setLoading(true);
     try {
-      await axios.post('/api/keys', { provider, name, api_key: apiKey, base_url: baseUrl });
+      await axios.post(`${API_BASE}/api/keys`, { provider, name, api_key: apiKey, base_url: baseUrl });
       setName('');
       setApiKey('');
       setBaseUrl('');
@@ -87,7 +87,7 @@ const ApiKeysDashboard = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Hapus kunci ini?')) return;
     try {
-      await axios.delete(`/api/keys/${id}`);
+      await axios.delete(`${API_BASE}/api/keys/${id}`);
       fetchKeys();
     } catch (e) {
       console.error(e);
@@ -96,7 +96,7 @@ const ApiKeysDashboard = () => {
 
   const handleReset = async (id) => {
     try {
-      await axios.put(`/api/keys/${id}/reset`);
+      await axios.put(`${API_BASE}/api/keys/${id}/reset`);
       fetchKeys();
     } catch (e) {
       console.error(e);

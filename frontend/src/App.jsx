@@ -108,7 +108,7 @@ function App() {
   const fetchMasterIntraday = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(${API_BASE}/api/master/intraday);
+      const res = await axios.get(`${API_BASE}/api/master/intraday`);
       setIntradayData(res.data.data);
     } catch (err) { console.error(err); }
     setLoading(false);
@@ -117,7 +117,7 @@ function App() {
   const fetchMasterSwing = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(${API_BASE}/api/master/swing);
+      const res = await axios.get(`${API_BASE}/api/master/swing`);
       setSwingData(res.data.data);
     } catch (err) { console.error(err); }
     setLoading(false);

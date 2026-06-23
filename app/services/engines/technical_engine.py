@@ -68,8 +68,23 @@ def calculate_sr_zones(df: pd.DataFrame, left: int = 5, right: int = 5, zone_pct
     # Sort support by closest to current price (descending)
     support_zones.sort(key=lambda x: x['center'], reverse=True)
     
-    # Find strongest support (highest count)
-    strongest_support = sorted(support_zones, key=lambda x: x['count'], reverse=True)[0] if support_zones else None
+    # Menemukan Major Support (SL2)
+    if support_zones:
+        if len(support_zones) > 1:
+            nearest = support_zones[0]
+            deeper_supports = support_zones[1:]
+            # Urutkan berdasarkan count (terbanyak) lalu kedalaman (terendah)
+            best_deeper = max(deeper_supports, key=lambda x: (x['count'], -x['center']))
+            
+            # Gunakan nearest HANYA jika ia jauh lebih kuat dari support di bawahnya
+            if nearest['count'] >= best_deeper['count'] + 2:
+                strongest_support = nearest
+            else:
+                strongest_support = best_deeper
+        else:
+            strongest_support = support_zones[0]
+    else:
+        strongest_support = None
     
     return {
         "nearest_resistance": resistance_zones[0] if resistance_zones else None,

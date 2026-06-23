@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, AlertTriangle, ShieldAlert } from 'lucide-react';
 import ChartModal from './ChartModal';
+import ReactMarkdown from 'react-markdown';
 
 const XRayModal = ({ data, onClose }) => {
   if (!data) return null;
@@ -39,8 +40,8 @@ const XRayModal = ({ data, onClose }) => {
             <h3 style={{ margin: '0 0 10px 0', color: '#2979ff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ShieldAlert size={18} /> Kesimpulan Mentor Robot
             </h3>
-            <div style={{ color: '#d1d5db', lineHeight: '1.6', fontSize: '14px', whiteSpace: 'pre-line' }}>
-              {mentor_advice}
+            <div className="markdown-body" style={{ color: '#d1d5db', lineHeight: '1.6', fontSize: '14px' }}>
+              <ReactMarkdown>{mentor_advice}</ReactMarkdown>
             </div>
           </div>
 

@@ -445,6 +445,22 @@ function App() {
     setXrayLoading(false);
   };
 
+  const fetchAIXray = async (ticker) => {
+    setXrayLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/xray/${ticker}`);
+      if (res.data.error) {
+        alert(res.data.error);
+      } else {
+        setXrayData(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan X-Ray Scan.");
+    }
+    setXrayLoading(false);
+  };
+
   const handleScan = () => {
     startEngineTracking('vip');
     const runScan = async () => {

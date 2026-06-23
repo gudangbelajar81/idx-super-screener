@@ -8,8 +8,8 @@ import requests
 from app.core.config import MIN_DAILY_VOLUME
 from app.core.idx_tickers import get_all_idx_tickers
 
-# Nilai batas volatilitas (misal rata-rata pergerakan harian > 4% = Gorengan)
-VOLATILITY_THRESHOLD = 0.04
+# Nilai batas volatilitas (misal rata-rata pergerakan harian > 2.5% = Gorengan)
+VOLATILITY_THRESHOLD = 0.025
 
 from urllib.parse import urlparse
 import json

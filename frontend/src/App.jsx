@@ -226,7 +226,7 @@ function App() {
   };
 
   const runSensus = async () => {
-    if (!window.confirm("Menjalankan Sensus akan mereset daftar pantauan (Watchlist) Mode Benteng Anda dan menggantinya dengan saham super terpilih. Lanjutkan?")) return;
+    if (!window.confirm("Menjalankan Sensus akan mereset daftar pantauan (Watchlist) Mode Position Anda dan menggantinya dengan saham super terpilih. Lanjutkan?")) return;
     setSensusLoading(true);
     try {
       const res = await axios.post(`${API_BASE}/api/sensus`);
@@ -241,7 +241,7 @@ function App() {
   };
 
   const runSensusNinja = async () => {
-    if (!window.confirm("Menjalankan Sensus Ninja akan mereset daftar pantauan Mode Ninja Anda dan menggantinya dengan saham gorengan yang sedang meledak volumenya. Lanjutkan?")) return;
+    if (!window.confirm("Menjalankan Sensus Ninja akan mereset daftar pantauan Mode Scalping Anda dan menggantinya dengan saham gorengan yang sedang meledak volumenya. Lanjutkan?")) return;
     setSensusLoading(true);
     try {
       const res = await axios.post(`${API_BASE}/api/sensus/ninja`);
@@ -431,9 +431,9 @@ function App() {
   // Sinkronisasi otomatis Sinyal VIP ke Command Center
   useEffect(() => {
     const elite = [];
-    swingData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Benteng'}));
-    kavaleriData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Kavaleri'}));
-    ninjaData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Ninja'}));
+    swingData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Position'}));
+    kavaleriData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Swing'}));
+    ninjaData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Scalping'}));
     whaleData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Radar Paus'}));
     globalData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Global Astro'}));
     
@@ -534,7 +534,7 @@ function App() {
             </li>
             <li className={`sidebar-item ${['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'active' : ''}`} onClick={() => setActiveTab('swing')}>
               <TrendingUp size={18} />
-              Menu IDX
+              Screener IDX
             </li>
             <li className={`sidebar-item ${activeTab === 'news' ? 'active' : ''}`} onClick={() => setActiveTab('news')}>
               <Activity size={18} />
@@ -868,13 +868,13 @@ function App() {
 
                 <div style={{ display: 'flex', gap: '10px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>
                   <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px' }}>
-                    Mode Benteng
+                    Mode Position
                   </button>
                   <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'kavaleri' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'kavaleri' ? 'black' : 'white', borderRadius: '8px' }}>
-                    Mode Kavaleri
+                    Mode Swing
                   </button>
                   <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'ninja' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'ninja' ? 'black' : 'white', borderRadius: '8px' }}>
-                    Mode Ninja
+                    Mode Scalping
                   </button>
                 </div>
               </>
@@ -1122,8 +1122,8 @@ function App() {
                 required
               />
               <select className="select-field" value={newMode} onChange={e => setNewMode(e.target.value)}>
-                <option value="swing">Mode Benteng (Swing)</option>
-                <option value="scalp">Mode Ninja (Scalping)</option>
+                <option value="swing">Mode Position (Swing)</option>
+                <option value="scalp">Mode Scalping (Scalping)</option>
               </select>
               <button type="submit" className="btn-scan" style={{ background: 'var(--color-blue)', color: 'white' }}>
                 <Plus size={18} /> Tambah Saham

@@ -21,6 +21,7 @@ from app.services.engines.universe_engine import build_universe, get_universe_by
 from app.services.engines.sensus_engine import run_sensus_pilihan, run_sensus_ninja, run_sensus_kavaleri
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.services.engines.notif_engine import send_telegram_message
+from app.services.engines.llm_engine import generate_xray_analysis
 from app.services.engines.paper_engine import record_paper_trade, get_paper_portfolio, evaluate_open_trades
 from app.services.engines.whale_engine import scan_whale_accumulation
 from app.services.engines.astro_engine import get_astro_cycles, get_current_astro_forecast
@@ -866,5 +867,24 @@ def clear_all_watchlist():
             cursor.execute("TRUNCATE TABLE idx_universe")
         conn.commit()
         return {"message": "Daftar Pantau berhasil dibersihkan!"}
+    finally:
+        conn.close()
+
+
+@router.get("/ai/xray/{ticker}")
+def get_ai_xray(ticker: str):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM idx_master WHERE ticker = %s", (ticker,))
+            stock = cursor.fetchone()
+            if not stock:
+                return {"data": "Data saham tidak ditemukan di database Master.", "message": "Error"}
+            
+            # Generate AI
+            xray_text = generate_xray_analysis(stock)
+            return {"data": xray_text, "message": "Berhasil"}
+    except Exception as e:
+        return {"data": str(e), "message": "Error"}
     finally:
         conn.close()

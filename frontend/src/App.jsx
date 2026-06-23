@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import { LayoutDashboard, TrendingUp, Zap, Activity, Settings, Bell, Search, BarChart2, Trash2, Plus, Globe } from 'lucide-react';
 import ChartModal from './ChartModal';
 import XRayModal from './XRayModal';
@@ -58,6 +59,8 @@ function App() {
   const [selectedStock, setSelectedStock] = useState(null);
   const [portfolioData, setPortfolioData] = useState([]);
   const [selectedChart, setSelectedChart] = useState(null);
+  const [aiData, setAiData] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
   const [selectedCalc, setSelectedCalc] = useState(null);
 
 
@@ -798,7 +801,10 @@ function App() {
                         {renderEdgeData(stock)}
                         
                         <div style={{display: 'flex', gap: '10px'}}>
-                          <button className="btn-chart" onClick={(e) => { e.stopPropagation(); setSelectedChart({ticker: stock.ticker, tp: stock.target_profit, sl: stock.stop_loss}); }}>
+                          <button className="btn-ai" onClick={(e) => { e.stopPropagation(); fetchAIXray(stock.ticker); }} style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg, #9b59b6, #8e44ad)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                              🧠 AI X-Ray
+                            </button>
+                            <button className="btn-chart" onClick={(e) => { e.stopPropagation(); setSelectedChart({ticker: stock.ticker, tp: stock.target_profit, sl: stock.stop_loss}); }}>
                             📈 Buka Grafik
                           </button>
                         </div>
@@ -1077,6 +1083,36 @@ function App() {
           />
         )}
       </main>
+
+      {aiData && (
+        <div className="modal-overlay" onClick={() => !loadingAi && setAiData(null)}>
+          <div className="modal-content ai-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px', background: 'rgba(15, 20, 30, 0.95)', border: '1px solid #9b59b6'}}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid rgba(155,89,182,0.3)', paddingBottom: '10px' }}>
+              <h2 style={{ margin: 0, color: '#9b59b6' }}>🧠 AI X-Ray: {aiData.ticker}</h2>
+              <button onClick={() => setAiData(null)} style={{ background: 'none', border: 'none', color: '#ff4757', fontSize: '1.5em', cursor: 'pointer' }}>&times;</button>
+            </div>
+            
+            <div className="ai-result-box" style={{ padding: '15px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', maxHeight: '60vh', overflowY: 'auto', fontSize: '0.95em', lineHeight: '1.6', color: '#ecf0f1' }}>
+              {loadingAi ? (
+                <div style={{textAlign: 'center', padding: '40px 0'}}>
+                  <div className="spinner" style={{width: '40px', height: '40px', border: '4px solid rgba(155,89,182,0.3)', borderTop: '4px solid #9b59b6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 15px auto'}}></div>
+                  <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                  <p style={{color: '#9b59b6', fontWeight: 'bold'}}>{aiData.text}</p>
+                </div>
+              ) : (
+                <div className="markdown-body">
+                  <ReactMarkdown>{aiData.text}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+            
+            <div style={{ marginTop: '15px', textAlign: 'right' }}>
+              <button onClick={() => setAiData(null)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

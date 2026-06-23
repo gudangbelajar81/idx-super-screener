@@ -175,45 +175,37 @@ def get_candidates(mode: str):
     category_map = {"swing": "SWING", "kavaleri": "KAVALERI", "ninja": "NINJA"}
     category = category_map.get(mode.lower(), "SWING")
     
-    # Daftar fallback jika idx_universe masih kosong (belum ada Sensus Master)
     FALLBACK = {
-        "SWING": ["BBCA.JK","BBRI.JK","BMRI.JK","TLKM.JK","ASII.JK","UNTR.JK","KLBF.JK","INDF.JK","ICBP.JK","ADRO.JK","PTBA.JK","ITMG.JK","BRIS.JK","ANTM.JK","MDKA.JK","CPIN.JK","MYOR.JK","AMRT.JK","TOWR.JK","EXCL.JK"],
-        "KAVALERI": ["BBCA.JK","BBRI.JK","BMRI.JK","BBNI.JK","TLKM.JK","ASII.JK","GOTO.JK","AMMN.JK","BREN.JK","TPIA.JK","UNTR.JK","PGAS.JK","AKRA.JK","INKP.JK","MAPI.JK","EXCL.JK","ISAT.JK","MTEL.JK","TOWR.JK","TBIG.JK"],
         "NINJA": ["BUMI.JK","BRMS.JK","BBYB.JK","ARTO.JK","GOTO.JK","BUKA.JK","VKTR.JK","WIRG.JK","WIFI.JK","DOID.JK","HRUM.JK","ESSA.JK","PSAB.JK","NCKL.JK","PGEO.JK","MBMA.JK","STRK.JK","CUAN.JK","PANI.JK","PTMP.JK"]
     }
     
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            order_by = "avg_value DESC" if category != "NINJA" else "volatility DESC"
-            cursor.execute(f"SELECT ticker, avg_value FROM idx_universe WHERE category=%s ORDER BY {order_by}", (category,))
-            rows = cursor.fetchall()
-            
-            # Jika database kosong, gunakan fallback hardcoded
-            if not rows:
+            if category == 'NINJA':
+                cursor.execute("SELECT ticker FROM watchlists WHERE mode='scalp'")
+                rows = cursor.fetchall()
+                if not rows:
+                    tickers = FALLBACK['NINJA']
+                else:
+                    tickers = [r['ticker'] for r in rows]
+                
                 results = []
-                for t in FALLBACK.get(category, []):
+                for t in tickers:
                     results.append({
                         "ticker": t.replace('.JK', ''),
                         "price": 0,
                         "liquidity": 0,
                         "signal": False,
                         "status": "KANDIDAT MENTAH",
-                        "reason": "Data default — Jalankan Sensus Master untuk hasil aktual"
+                        "reason": "Menunggu Pemindaian VIP..." if rows else "Data default — Jalankan Sensus Master"
                     })
-                return {"data": results}
-            
-            results = []
-            for row in rows:
-                results.append({
-                    "ticker": row['ticker'].replace('.JK', ''),
-                    "price": 0,
-                    "liquidity": float(row['avg_value']),
-                    "signal": False,
-                    "status": "KANDIDAT MENTAH",
-                    "reason": "Menunggu Pemindaian VIP"
-                })
-            return {"data": results}
+                return {"data": results, "message": "Candidates loaded"}
+            else:
+                return {"data": [], "message": "Not used for Swing/Position"}
+    except Exception as e:
+        print(f"DB Error get_candidates: {e}")
+        return {"data": [], "message": "Failed"}
     finally:
         conn.close()
 
@@ -281,7 +273,7 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM idx_universe WHERE category='NINJA' ORDER BY volatility DESC")
+            cursor.execute("SELECT ticker FROM watchlists WHERE mode='scalp'")
             scalp_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()

@@ -1,4 +1,10 @@
 import os
+
+path = 'app/services/engines/llm_engine.py'
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+new_content = '''import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 from app.core.key_router import APIKeyRouter
@@ -16,7 +22,7 @@ def generate_xray_analysis(stock_data: dict) -> str:
     Otomatis merotasi API Key jika terjadi limit/error.
     """
     if not gemini_router.has_active_keys():
-        return "⚠️ **API Key Gemini belum dikonfigurasi atau semua limit habis!**\n\nSilakan tambahkan `GEMINI_API_KEYS` (bisa lebih dari satu, pisah koma) di pengaturan server (Railway/Vercel) atau file `.env` lokal Bos."
+        return "⚠️ **API Key Gemini belum dikonfigurasi atau semua limit habis!**\\n\\nSilakan tambahkan `GEMINI_API_KEYS` (bisa lebih dari satu, pisah koma) di pengaturan server (Railway/Vercel) atau file `.env` lokal Bos."
 
     # Ekstrak data mentah
     ticker = stock_data.get('ticker', 'UNKNOWN')
@@ -83,6 +89,12 @@ def generate_xray_analysis(stock_data: dict) -> str:
                 print(f"[LLM Engine] Key limit tercapai. Mencoba kunci lain...")
                 gemini_router.mark_dead(current_key)
             else:
-                return f"❌ **Gagal menghubungi Otak AI (Gemini):** {str(e)}\n\nMungkin ada gangguan koneksi server."
+                return f"❌ **Gagal menghubungi Otak AI (Gemini):** {str(e)}\\n\\nMungkin ada gangguan koneksi server."
 
     return "❌ **Semua API Key Gemini telah mencapai limit (Habis Kuota).** Silakan tambahkan kunci baru di konfigurasi server."
+'''
+
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print('llm_engine.py patched successfully')

@@ -52,9 +52,6 @@ function App() {
     localStorage.setItem('GOAPI_KEY', goapiKey);
   }, [serverKey, goapiKey]);
 
-  // === PREMIUM / FREE MODE TOGGLE ===
-  const [isPremium, setIsPremium] = useState(false);
-
   // Engine Status Tracker
   const [engineStatus, setEngineStatus] = useState('idle');
   const [engineMsg, setEngineMsg] = useState('');
@@ -97,7 +94,7 @@ function App() {
   const fetchComposite = async () => {
     setCompositeLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/composite?premium=${isPremium}`);
+      const res = await axios.get(`${API_BASE}/api/composite?premium=true`);
       setCompositeData(res.data.data);
     } catch (err) {
       console.error(err);
@@ -263,8 +260,6 @@ function App() {
   };
 
   const handleScan = () => {
-    // Auto-aktifkan Premium saat VIP Scan ditekan
-    setIsPremium(true);
     startEngineTracking('vip');
     const runScan = async () => {
       try {
@@ -275,7 +270,7 @@ function App() {
         else if (activeTab === 'none') await fetchGlobal();
         stopEngineTracking(true, 'Pemindaian VIP berhasil. Lihat hasil di bawah.');
       } catch (err) {
-        stopEngineTracking(false, 'Pemindaian gagal — coba lagi atau gunakan Free Mode.');
+        stopEngineTracking(false, 'Pemindaian gagal - periksa koneksi atau token GoAPI Anda.');
       }
     };
     runScan();
@@ -449,62 +444,7 @@ function App() {
           <h1>
             {activeTab === 'home' ? 'Ultimate Command Center' : ['intraday', 'swing'].includes(activeTab) ? 'Master Trading AI' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
           </h1>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-
-            {/* === PREMIUM TOGGLE BUTTON === */}
-            <div
-              id="premium-toggle"
-              onClick={() => setIsPremium(p => !p)}
-              title={isPremium ? 'Mode PREMIUM aktif (GoAPI VIP - Token terpotong)' : 'Mode GRATIS aktif (Yahoo Finance - Tidak potong token)'}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                padding: '6px 14px',
-                borderRadius: '999px',
-                border: isPremium ? '1px solid #f1c40f' : '1px solid rgba(255,255,255,0.2)',
-                background: isPremium
-                  ? 'linear-gradient(135deg, rgba(241,196,15,0.25), rgba(230,126,34,0.15))'
-                  : 'rgba(255,255,255,0.07)',
-                transition: 'all 0.3s ease',
-                userSelect: 'none',
-                boxShadow: isPremium ? '0 0 12px rgba(241,196,15,0.4)' : 'none',
-              }}
-            >
-              {/* Toggle Track */}
-              <div style={{
-                position: 'relative',
-                width: '38px',
-                height: '20px',
-                borderRadius: '999px',
-                background: isPremium ? 'linear-gradient(90deg, #f1c40f, #e67e22)' : 'rgba(255,255,255,0.15)',
-                transition: 'background 0.3s ease',
-                flexShrink: 0,
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  top: '3px',
-                  left: isPremium ? '20px' : '3px',
-                  width: '14px',
-                  height: '14px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.3s ease',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-                }} />
-              </div>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: '700',
-                color: isPremium ? '#f1c40f' : '#aaa',
-                letterSpacing: '0.5px',
-                transition: 'color 0.3s',
-              }}>
-                {isPremium ? 'PREMIUM ON' : 'FREE MODE'}
-              </span>
-            </div>
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <form onSubmit={handleXRaySubmit} style={{ position: 'relative' }}>
               <input 
                 type="text" 

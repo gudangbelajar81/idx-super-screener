@@ -220,108 +220,61 @@ def get_candidates(mode: str):
 
 @router.get("/api/scan/swing")
 def scan_swing(premium: bool = True, x_goapi_key: str = Header(None)):
+    """Mode Position: Mengambil hasil EOD Autopilot dari database"""
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM idx_universe WHERE category='SWING' ORDER BY avg_value DESC")
-            swing_universe = [row['ticker'] for row in cursor.fetchall()]
+            cursor.execute("SELECT * FROM idx_signals WHERE mode='position'")
+            signals = cursor.fetchall()
+            
+            # Format to match frontend expectations
+            results = []
+            for s in signals:
+                results.append({
+                    'ticker': s['ticker'],
+                    'price': s['price'],
+                    'volatility': s['volatility'],
+                    'signal': s['signal_text'],
+                    'status': s['status'],
+                    'reason': s['reason'],
+                    'tp': s['tp'],
+                    'sl': s['sl']
+                })
+            return {"data": results, "message": "Fetched from Autopilot Database"}
+    except Exception as e:
+        print(f"DB Fetch Error (Position): {e}")
+        return {"data": [], "message": "Failed to fetch Autopilot data"}
     finally:
         conn.close()
-            
-    if not swing_universe:
-        return {"data": []}
-
-    daily_data = download_daily_data(swing_universe, period="1y", use_premium=premium, goapi_key=x_goapi_key)
-    
-    def process_swing(args):
-        ticker, df = args
-        if df.empty: return None
-        avg_volume = df['Volume'].tail(20).mean()
-        last_close = df['Close'].iloc[-1]
-        avg_value = avg_volume * last_close
-        
-        item = {"ticker": ticker.replace(".JK", ""), "price": float(last_close), "liquidity": float(avg_value), "signal": False, "status": "Aman", "reason": ""}
-        if avg_value < MIN_DAILY_VOLUME:
-            item["status"], item["reason"] = "Ditolak", "Likuiditas Rendah"
-            return item
-            
-        analysis = analyze_swing_fortress(df)
-        item.update({"signal": analysis.get("signal", False), "cmf": analysis.get("cmf", 0), "tp": analysis.get("tp"), "sl": analysis.get("sl"), "rr": analysis.get("rr")})
-        
-        if item["signal"]:
-            item["status"] = "KANDIDAT"
-            rr_text = f" | R:R {item['rr']}x" if item['rr'] else ""
-            item["reason"] = f"Uptrend + ZLSMA + CMF:{item['cmf']}{rr_text}"
-            news = get_news_sentiment(ticker)
-            item["sentiment"], item["news_count"] = news.get("sentiment", "NETRAL"), news.get("news_count", 0)
-            if "NEGATIF" in item["sentiment"]: item["status"] = "HATI-HATI"
-            notify_signal(item, mode="swing")
-            if item.get("tp") and item.get("sl"):
-                record_paper_trade(item["ticker"], item["price"], item["tp"], item["sl"])
-        else:
-            item["reason"] = "Belum ada sinyal valid"
-            item["status"] = "Pantau"
-        return item
-        
-    import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(filter(None, executor.map(process_swing, daily_data.items())))
-        
-    return {"data": results}
 
 @router.get("/api/scan/kavaleri")
 def scan_kavaleri(premium: bool = True, x_goapi_key: str = Header(None)):
-    """Memindai saham mode Kavaleri (Fast Swing 1-7 Hari) dengan TTM Squeeze & SMC"""
+    """Mode Swing: Mengambil hasil EOD Autopilot dari database"""
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT ticker FROM idx_universe WHERE category='KAVALERI' ORDER BY avg_value DESC")
-            tickers = [row["ticker"] for row in cursor.fetchall()]
+            cursor.execute("SELECT * FROM idx_signals WHERE mode='swing'")
+            signals = cursor.fetchall()
+            
+            # Format to match frontend expectations
+            results = []
+            for s in signals:
+                results.append({
+                    'ticker': s['ticker'],
+                    'price': s['price'],
+                    'volatility': s['volatility'],
+                    'signal': s['signal_text'],
+                    'status': s['status'],
+                    'reason': s['reason'],
+                    'tp': s['tp'],
+                    'sl': s['sl']
+                })
+            return {"data": results, "message": "Fetched from Autopilot Database"}
+    except Exception as e:
+        print(f"DB Fetch Error (Swing): {e}")
+        return {"data": [], "message": "Failed to fetch Autopilot data"}
     finally:
         conn.close()
-    
-    if not tickers:
-        return {"data": [], "message": "Jalankan Sensus Kavaleri terlebih dahulu!"}
-        
-    yfinance_tickers = [t if t.endswith(".JK") else f"{t}.JK" for t in tickers]
-    data_dict = download_daily_data(yfinance_tickers, period="6mo", use_premium=premium, goapi_key=x_goapi_key)
-    
-    def process_kavaleri(args):
-        t_raw, df = args
-        if df.empty: return None
-        t_clean = t_raw.replace(".JK", "")
-        analysis = analyze_cavalry_fast_swing(df)
-        
-        item = {
-            "ticker": t_clean, "price": analysis.get("close", 0), "signal": analysis.get("signal", False),
-            "status": "Aman", "reason": "", "tp": analysis.get("tp"), "sl": analysis.get("sl"), "rr": analysis.get("rr"),
-            "squeeze_fired": analysis.get("squeeze_fired", False), "smc_trap": analysis.get("smc_trap", False)
-        }
-        
-        if item["signal"]:
-            item["status"] = "KANDIDAT KAVALERI"
-            reasons = []
-            if item["squeeze_fired"]: reasons.append("SQUEEZE FIRED")
-            if item["smc_trap"]: reasons.append("SMC TRAP")
-            item["reason"] = " + ".join(reasons) if reasons else "Momentum + Bandar Masuk"
-            
-            pesan = f"🐎 KAVALERI TRIGGER: {t_clean}\\nHarga: {item['price']}\\n"
-            if item['squeeze_fired']: pesan += "💥 TTM SQUEEZE FIRED! (Energi Meledak)\\n"
-            if item['smc_trap']: pesan += "🏦 SMC LIQUIDITY TRAP! (Bandar Makan Ritel)\\n"
-            pesan += f"TP: {item['tp']} | SL: {item['sl']}"
-            notify_signal(item, mode="kavaleri")
-            
-            if item.get("tp") and item.get("sl"):
-                record_paper_trade(item["ticker"], item["price"], item["tp"], item["sl"])
-        else:
-            item["reason"], item["status"] = "Menunggu Squeeze / Trap", "Pantau"
-        return item
-
-    import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(filter(None, executor.map(process_kavaleri, data_dict.items())))
-        
-    return {"data": results}
 
 @router.get("/api/scan/ninja")
 def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
@@ -889,3 +842,13 @@ def emergency_seed():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+
+
+@router.post("/api/trigger-autopilot")
+def trigger_autopilot(api_key: str = Depends(verify_api_key)):
+    try:
+        from app.worker.autopilot import run_eod_autopilot
+        run_eod_autopilot()
+        return {"message": "Autopilot Triggered successfully!"}
+    except Exception as e:
+        return {"message": f"Error triggering autopilot: {e}"}

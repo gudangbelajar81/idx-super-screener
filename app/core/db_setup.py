@@ -41,7 +41,25 @@ def setup_database():
                 )
             """)
 
-            # 4. Seeding Data Awal (Hanya jika kosong/baru)
+            # 4. Tabel Signals (Untuk Autopilot Swing & Position)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS idx_signals (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    ticker VARCHAR(20) NOT NULL,
+                    mode VARCHAR(20) NOT NULL,
+                    price FLOAT NOT NULL,
+                    volatility FLOAT,
+                    signal_text VARCHAR(50) NOT NULL,
+                    status VARCHAR(50),
+                    reason TEXT,
+                    tp FLOAT,
+                    sl FLOAT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY unique_ticker_mode (ticker, mode)
+                )
+            """)
+
+            # 5. Seeding Data Awal (Hanya jika kosong/baru)
             initial_data = [
                 ("BBCA.JK", "swing"), ("BBRI.JK", "swing"), ("BMRI.JK", "swing"), ("BBNI.JK", "swing"),
                 ("TLKM.JK", "swing"), ("ASII.JK", "swing"), ("UNVR.JK", "swing"), ("ICBP.JK", "swing"),

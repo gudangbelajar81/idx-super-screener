@@ -1,4 +1,9 @@
-import os
+import re
+
+with open('app/worker/scheduler.py', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+new_scheduler = '''import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.services.engines.universe_engine import build_universe
 from app.services.engines.notif_engine import send_telegram_message
@@ -12,7 +17,7 @@ def scheduled_universe_build():
     print("[Scheduler] Memulai Sensus Saham Otomatis...")
     try:
         res = build_universe()
-        send_telegram_message(f"🤖 <b>SENSUS OTOMATIS SELESAI</b>\n━━━━━━━━━━━━━━━━━━━━\nSistem telah berhasil memperbarui dan mengklasifikasikan <b>{res.get('total', 0)} saham</b> untuk minggu ini.\n\nMesin siap digunakan untuk *trading* besok pagi! 🚀")
+        send_telegram_message(f"🤖 <b>SENSUS OTOMATIS SELESAI</b>\\n━━━━━━━━━━━━━━━━━━━━\\nSistem telah berhasil memperbarui dan mengklasifikasikan <b>{res.get('total', 0)} saham</b> untuk minggu ini.\\n\\nMesin siap digunakan untuk *trading* besok pagi! 🚀")
     except Exception as e:
         print(f"[Scheduler] Error: {e}")
 
@@ -34,3 +39,8 @@ def start_scheduler():
 
 def stop_scheduler():
     scheduler.shutdown()
+'''
+
+with open('app/worker/scheduler.py', 'w', encoding='utf-8') as f:
+    f.write(new_scheduler)
+print('scheduler.py patched')

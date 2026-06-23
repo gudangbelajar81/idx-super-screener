@@ -212,11 +212,11 @@ function App() {
     setLoading(true);
     try {
       if (mode === 'swing' || mode === 'kavaleri') {
-        const res = await axios.get(${API_BASE}/api/scan/);
+        const res = await axios.get(`${API_BASE}/api/scan/${mode}?premium=${isPremium}`);
         if (mode === 'swing') setSwingData(res.data.data);
         else if (mode === 'kavaleri') setKavaleriData(res.data.data);
       } else {
-        const res = await axios.get(${API_BASE}/api/candidates/);
+        const res = await axios.get(`${API_BASE}/api/candidates/${mode}`);
         setNinjaData(res.data.data);
       }
     } catch (err) {

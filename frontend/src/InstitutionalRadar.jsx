@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Target, Activity, ShieldAlert, ChevronDown, ChevronUp, PlayCircle, Info } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -13,9 +14,8 @@ const InstitutionalRadar = ({ apiKey }) => {
   const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/institutional/candidates`);
-      const data = await res.json();
-      setCandidates(data.data || []);
+      const res = await axios.get(`${API_BASE}/api/institutional/candidates`);
+      setCandidates(res.data.data || []);
     } catch (err) {
       console.error(err);
     }
@@ -30,12 +30,10 @@ const InstitutionalRadar = ({ apiKey }) => {
     if (!apiKey) return alert("Masukkan API Key (Kata Sandi) di bagian atas layar.");
     setScanning(true);
     try {
-      const res = await fetch(`${API_BASE}/api/institutional/build`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}` }
+      const res = await axios.post(`${API_BASE}/api/institutional/build`, {}, {
+        headers: { 'X-API-Key': apiKey }
       });
-      const result = await res.json();
-      alert(result.message);
+      alert(res.data.message);
     } catch (err) {
       alert("Gagal memulai sensus: " + err);
     }

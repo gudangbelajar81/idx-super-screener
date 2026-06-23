@@ -6,6 +6,7 @@ from app.services.engines.data_engine import download_daily_data
 from app.services.engines.notif_engine import send_telegram_message
 from app.services.engines.universe_engine import set_status
 from app.core.idx_tickers import get_all_idx_tickers
+from app.services.engines.paper_engine import record_paper_trade
 
 def run_eod_autopilot():
     print("🚀 [MASTER AI] Memulai Proses Pemindaian Total...")
@@ -66,6 +67,13 @@ def run_eod_autopilot():
                         intraday_count += 1
                     if analysis["swing_recommendation"] in ["BUY", "STRONG BUY"]:
                         swing_count += 1
+                        
+                    # 🤖 Integrasi Portofolio Robot (Paper Trading)
+                    if analysis["recommendation"] in ["BUY", "STRONG BUY"] and analysis["target_profit"] > 0 and analysis["stop_loss"] > 0:
+                        try:
+                            record_paper_trade(ticker.replace(".JK", ""), analysis["close_price"], analysis["target_profit"], analysis["stop_loss"])
+                        except Exception as pe:
+                            print(f"Paper trade record error for {ticker}: {pe}")
                         
                     results.append((
                         ticker.replace(".JK", ""), "Unknown", analysis["close_price"], analysis["avg_value"], analysis["avg_volatility"],

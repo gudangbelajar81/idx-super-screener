@@ -63,7 +63,6 @@ function App() {
   // View Mode & Sorting State
   const [viewMode, setViewMode] = useState('cards'); // 'cards' atau 'table'
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [liveRadar, setLiveRadar] = useState(false);
   const [engineType, setEngineType] = useState('');
 
   const startEngineTracking = (type) => {
@@ -307,18 +306,6 @@ function App() {
     }
     return () => clearInterval(sensusTimer);
   }, [autoSensusInterval, buildingUniverse]);
-
-  // Live Radar Effect (Auto Scan every 3 mins for Scalping)
-  useEffect(() => {
-    let radarTimer;
-    if (liveRadar && activeTab === 'intraday') {
-      radarTimer = setInterval(() => {
-        console.log('Live Radar: Auto-scanning Scalping VIP...');
-        fetchMasterIntraday();
-      }, 180000);
-    }
-    return () => clearInterval(radarTimer);
-  }, [liveRadar, activeTab]);
 
   const filteredSwingData = showEliteOnly 
     ? swingData.filter(d => d.smart_money_score >= 80 && d.composite_score >= 75 && d.risk_reward_ratio <= 0.4)
@@ -790,26 +777,9 @@ function App() {
                   </div>
                 </div>
                 <div style={{display:'flex', gap:'10px', alignItems: 'center'}}>
-                  {activeTab === 'intraday' && (
-                    <label style={{
-                      display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                      background: liveRadar ? 'rgba(255, 71, 87, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                      padding: '8px 12px', borderRadius: '8px', border: liveRadar ? '1px solid #ff4757' : '1px solid transparent',
-                      color: liveRadar ? '#ff4757' : 'white', fontWeight: 'bold'
-                    }}>
-                      <input 
-                        type="checkbox" 
-                        checked={liveRadar} 
-                        onChange={(e) => setLiveRadar(e.target.checked)} 
-                        style={{ display: 'none' }}
-                      />
-                      <div className={`radar-dot ${liveRadar ? 'pulsing' : ''}`} style={{ width: 10, height: 10, borderRadius: '50%', background: liveRadar ? '#ff4757' : '#555' }}></div>
-                      Live Radar
-                    </label>
-                  )}
                   <button className="btn-scan" onClick={handleScan} disabled={loading} style={{background: 'var(--color-green)', color: 'black'}}>
                     {loading ? <div className="loader"></div> : <Search size={18} />}
-                    {loading ? 'Memindai...' : 'Mulai Pemindaian VIP'}
+                    {loading ? 'Memuat Data...' : '⚡ Refresh Data Lokal'}
                   </button>
                 </div>
               </div>

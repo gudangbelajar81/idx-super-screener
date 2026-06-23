@@ -856,3 +856,15 @@ def get_master_swing():
         return {"data": [], "message": str(e)}
     finally:
         conn.close()
+
+@router.delete("/watchlist/all")
+def clear_all_watchlist():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("TRUNCATE TABLE idx_watchlist")
+            cursor.execute("TRUNCATE TABLE idx_universe")
+        conn.commit()
+        return {"message": "Daftar Pantau berhasil dibersihkan!"}
+    finally:
+        conn.close()

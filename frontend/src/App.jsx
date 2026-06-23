@@ -14,9 +14,8 @@ function App() {
   const [compositeData, setCompositeData] = useState([]);
   const [compositeLoading, setCompositeLoading] = useState(false);
   const [swingData, setSwingData] = useState([]);
-  const [ninjaData, setNinjaData] = useState([]);
-  const [kavaleriData, setKavaleriData] = useState([]);
-  const [whaleData, setWhaleData] = useState([]);
+  const [intradayData, setIntradayData] = useState([]);
+    const [whaleData, setWhaleData] = useState([]);
   const [globalData, setGlobalData] = useState([]);
   const [astroForecast, setAstroForecast] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -105,169 +104,28 @@ function App() {
     setCompositeLoading(false);
   };
 
-  const fetchSwing = async (forcePremium = isPremium) => {
+  
+  const fetchMasterIntraday = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/api/scan/swing?premium=${forcePremium}`);
+      const res = await axios.get(${API_BASE}/api/master/intraday);
+      setIntradayData(res.data.data);
+    } catch (err) { console.error(err); }
+    setLoading(false);
+  };
+
+  const fetchMasterSwing = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(${API_BASE}/api/master/swing);
       setSwingData(res.data.data);
-    } catch (err) {
-      // Jika premium gagal, fallback ke yahoo finance
-      if (forcePremium) {
-        console.warn('GoAPI error, fallback ke Yahoo Finance...');
-        try {
-          const res2 = await axios.get(`${API_BASE}/api/scan/swing?premium=false`);
-          setSwingData(res2.data.data);
-          setIsPremium(false);
-        } catch (err2) { console.error(err2); }
-      } else { console.error(err); }
-    }
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
-
-  const fetchKavaleri = async (forcePremium = isPremium) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${forcePremium}`);
-      setKavaleriData(res.data.data);
-    } catch (err) {
-      if (forcePremium) {
-        console.warn('GoAPI error, fallback ke Yahoo Finance...');
-        try {
-          const res2 = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=false`);
-          setKavaleriData(res2.data.data);
-          setIsPremium(false);
-        } catch (err2) { console.error(err2); }
-      } else { console.error(err); }
-    }
-    setLoading(false);
-  };
-
-  const fetchWhale = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/scan/whale`);
-      setWhaleData(res.data.data);
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
-  const fetchGlobal = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/scan/global`);
-      setGlobalData(res.data.data);
-      
-      const resAstro = await axios.get(`${API_BASE}/api/astro/forecast`);
-      setAstroForecast(resAstro.data.data);
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
-  const fetchNinja = async (forcePremium = isPremium) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API_BASE}/api/scan/ninja?premium=${forcePremium}`);
-      setNinjaData(res.data.data);
-    } catch (err) {
-      if (forcePremium) {
-        console.warn('GoAPI error, fallback ke Yahoo Finance...');
-        try {
-          const res2 = await axios.get(`${API_BASE}/api/scan/ninja?premium=false`);
-          setNinjaData(res2.data.data);
-          setIsPremium(false);
-        } catch (err2) { console.error(err2); }
-      } else { console.error(err); }
-    }
-    setLoading(false);
-  };
-
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      if (activeTab === 'swing') {
-        const res = await axios.get(`${API_BASE}/api/scan/all-swing?premium=${isPremium}`);
-        if (res.data.message) alert(res.data.message);
-        setSwingData(res.data.data || []);
-      } else if (activeTab === 'none') {
-        const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${isPremium}`);
-        if (res.data.message) alert(res.data.message);
-        setKavaleriData(res.data.data || []);
-      } else {
-        const res = await axios.get(`${API_BASE}/api/scan/all-ninja?premium=${isPremium}`);
-        if (res.data.message) alert(res.data.message);
-        setNinjaData(res.data.data || []);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Gagal scan keseluruhan. Pastikan server nyala.");
-    }
-    setLoading(false);
-  };
-
+  
   const fetchCandidates = async (mode) => {
-    setLoading(true);
-    try {
-      if (mode === 'swing' || mode === 'kavaleri') {
-        const res = await axios.get(`${API_BASE}/api/scan/${mode}?premium=${isPremium}`);
-        if (mode === 'swing') setSwingData(res.data.data);
-        else if (mode === 'kavaleri') setKavaleriData(res.data.data);
-      } else {
-        const res = await axios.get(`${API_BASE}/api/candidates/${mode}`);
-        setNinjaData(res.data.data);
-      }
-    } catch (err) {
-      console.error('Fetch error:', err);
-    }
-    setLoading(false);
-  };
-
-  const runSensus = async () => {
-    if (!window.confirm("Menjalankan Sensus akan mereset daftar pantauan (Watchlist) Mode Position Anda dan menggantinya dengan saham super terpilih. Lanjutkan?")) return;
-    setSensusLoading(true);
-    try {
-      const res = await axios.post(`${API_BASE}/api/sensus`);
-      alert(res.data.message);
-      fetchWatchlist();
-      fetchSwing();
-    } catch (err) {
-      console.error(err);
-      alert("Gagal menjalankan Sensus.");
-    }
-    setSensusLoading(false);
-  };
-
-  const runSensusNinja = async () => {
-    if (!window.confirm("Menjalankan Sensus Ninja akan mereset daftar pantauan Mode Scalping Anda dan menggantinya dengan saham gorengan yang sedang meledak volumenya. Lanjutkan?")) return;
-    setSensusLoading(true);
-    try {
-      const res = await axios.post(`${API_BASE}/api/sensus/ninja`);
-      alert(res.data.message);
-      fetchWatchlist();
-      fetchNinja(); // Reload the ninja screener
-    } catch (err) {
-      console.error(err);
-      alert("Gagal menjalankan Sensus Ninja.");
-    }
-    setSensusLoading(false);
-  };
-
-  const runSensusKavaleri = async () => {
-    if (!window.confirm("Menjalankan Sensus Kavaleri akan mereset Watchlist Kavaleri Anda. Lanjutkan?")) return;
-    setSensusLoading(true);
-    try {
-      const res = await axios.post(`${API_BASE}/api/sensus/kavaleri`);
-      alert(res.data.message);
-      fetchWatchlist();
-      fetchKavaleri(); 
-    } catch (err) {
-      console.error(err);
-      alert("Gagal menjalankan Sensus Kavaleri.");
-    }
-    setSensusLoading(false);
+    if (mode === 'intraday') fetchMasterIntraday();
+    if (mode === 'swing') fetchMasterSwing();
   };
 
   const fetchWatchlist = async () => {
@@ -368,13 +226,7 @@ function App() {
       fetchWatchlist();
     } else if (activeTab === 'portfolio') {
       fetchPortfolio();
-    } else if (activeTab === 'swing' && swingData.length === 0) {
-      fetchCandidates('swing');
-    } else if (activeTab === 'intraday' && ninjaData.length === 0) {
-      fetchCandidates('ninja');
-    } else if (activeTab === 'none' && kavaleriData.length === 0) {
-      fetchCandidates('kavaleri');
-    }
+    } else if (activeTab === 'swing' && swingData.length === 0) { fetchMasterSwing(); } else if (activeTab === 'intraday' && intradayData.length === 0) { fetchMasterIntraday(); }
     // Fetch IPO news only once when first loading
     if (ipoNews.length === 0) {
       fetchIpoNews();
@@ -431,14 +283,13 @@ function App() {
   // Sinkronisasi otomatis Sinyal VIP ke Command Center
   useEffect(() => {
     const elite = [];
-    swingData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Position'}));
-    kavaleriData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Swing'}));
-    ninjaData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Scalping'}));
+    swingData.forEach(s => elite.push({...s, source: 'Swing Trading'}));
+      intradayData.forEach(s => elite.push({...s, source: 'Intraday Momentum'}));
     whaleData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Radar Paus'}));
     globalData.filter(s => s.signal).forEach(s => elite.push({...s, source: 'Global Astro'}));
     
     setCompositeData(elite);
-  }, [swingData, kavaleriData, ninjaData, whaleData, globalData]);
+  }, [swingData, intradayData, whaleData, globalData]);
 
   
   // Live Radar Effect (Auto Scan every 3 mins for Scalping)
@@ -453,7 +304,7 @@ function App() {
     return () => clearInterval(radarTimer);
   }, [liveRadar, activeTab]);
 
-  const currentData = activeTab === 'swing' ? swingData : activeTab === 'intraday' ? ninjaData : activeTab === 'none' ? kavaleriData : whaleData;
+  const currentData = activeTab === 'swing' ? swingData : activeTab === 'intraday' ? intradayData : whaleData;
 
   const totalScanned = currentData.length;
   const totalSignals = currentData.filter(d => d.composite_score > 60).length;

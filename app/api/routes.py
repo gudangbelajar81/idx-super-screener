@@ -175,10 +175,6 @@ def get_candidates(mode: str):
     category_map = {"swing": "SWING", "kavaleri": "KAVALERI", "ninja": "NINJA"}
     category = category_map.get(mode.lower(), "SWING")
     
-    FALLBACK = {
-        "NINJA": ["BUMI.JK","BRMS.JK","BBYB.JK","ARTO.JK","GOTO.JK","BUKA.JK","VKTR.JK","WIRG.JK","WIFI.JK","DOID.JK","HRUM.JK","ESSA.JK","PSAB.JK","NCKL.JK","PGEO.JK","MBMA.JK","STRK.JK","CUAN.JK","PANI.JK","PTMP.JK"]
-    }
-    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -186,10 +182,9 @@ def get_candidates(mode: str):
                 cursor.execute("SELECT ticker FROM watchlists WHERE mode='scalp'")
                 rows = cursor.fetchall()
                 if not rows:
-                    tickers = FALLBACK['NINJA']
-                else:
-                    tickers = [r['ticker'] for r in rows]
+                    return {"data": [], "message": "Daftar Pantauan Kosong. Silakan klik 'Jalankan Sensus Master' terlebih dahulu."}
                 
+                tickers = [r['ticker'] for r in rows]
                 results = []
                 for t in tickers:
                     results.append({
@@ -198,7 +193,7 @@ def get_candidates(mode: str):
                         "liquidity": 0,
                         "signal": False,
                         "status": "KANDIDAT MENTAH",
-                        "reason": "Menunggu Pemindaian VIP..." if rows else "Data default — Jalankan Sensus Master"
+                        "reason": "Menunggu Pemindaian VIP..."
                     })
                 return {"data": results, "message": "Candidates loaded"}
             else:
@@ -277,14 +272,9 @@ def scan_ninja(premium: bool = True, x_goapi_key: str = Header(None)):
             scalp_universe = [row['ticker'] for row in cursor.fetchall()]
     finally:
         conn.close()
-    
-    # Fallback jika idx_universe kosong
+        
     if not scalp_universe:
-        scalp_universe = [
-            "BUMI.JK","BRMS.JK","BBYB.JK","ARTO.JK","GOTO.JK","BUKA.JK","VKTR.JK",
-            "WIRG.JK","WIFI.JK","DOID.JK","HRUM.JK","ESSA.JK","NCKL.JK","PGEO.JK",
-            "MBMA.JK","CUAN.JK","PANI.JK","PTMP.JK","BRPT.JK","MDKA.JK"
-        ]
+        return {"data": [], "message": "Sensus belum dijalankan. Silakan Jalankan Sensus Master terlebih dahulu."}
 
     # Ninja gunakan data harian (intraday 5m Yahoo IDX sangat tidak stabil)
     # Data 3 bulan cukup untuk analisa volume spike & scalp

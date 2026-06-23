@@ -45,12 +45,14 @@ def run_eod_autopilot():
     print("   [1/4] Menjalankan Sensus Position (Benteng)...")
     position_tickers = run_sensus_pilihan()
     if not position_tickers:
-        position_tickers = ["BBCA.JK", "BBRI.JK", "BMRI.JK"] # fallback
+        print("   ❌ Sensus Position gagal atau tidak ada kandidat. Melewati proses Position.")
+        position_tickers = []
         
     print("   [2/4] Menjalankan Sensus Swing (Kavaleri)...")
     swing_tickers = run_sensus_kavaleri()
     if not swing_tickers:
-        swing_tickers = ["BREN.JK", "AMMN.JK", "CUAN.JK"] # fallback
+        print("   ❌ Sensus Swing gagal atau tidak ada kandidat. Melewati proses Swing.")
+        swing_tickers = []
     
     # 2. Download Data & Analisa
     print("   [3/4] Mendownload Data & Analisis VIP untuk Position...")

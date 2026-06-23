@@ -541,11 +541,14 @@ function App() {
         </div>
         <nav className="sidebar-nav">
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            
-            
-
-          
-          
+          <li className={`sidebar-item ${['intraday', 'swing'].includes(activeTab) ? 'active' : ''}`} onClick={() => setActiveTab('intraday')}>
+            <LayoutDashboard size={18} />
+            Master Trading AI
+          </li>
+          <li className={`sidebar-item ${activeTab === 'portfolio' ? 'active' : ''}`} onClick={() => setActiveTab('portfolio')}>
+            <BarChart2 size={18} />
+            Portofolio Robot
+          </li>
           <li className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`} style={{ marginTop: 'auto' }} onClick={() => setActiveTab('settings')}>
             <Settings size={18} />
             Pengaturan

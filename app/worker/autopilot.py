@@ -12,8 +12,8 @@ def run_eod_autopilot():
     print("🚀 [MASTER AI] Memulai Proses Pemindaian Total...")
     
     # Ambil 800+ saham IDX
-    # all_tickers = get_all_idx_tickers()
-    all_tickers = ['BBCA.JK', 'BMRI.JK', 'BBRI.JK', 'BBNI.JK', 'TLKM.JK', 'AMMN.JK', 'BREN.JK', 'ASII.JK', 'BRPT.JK', 'CUAN.JK']
+    all_tickers = get_all_idx_tickers()
+    # all_tickers = ['BBCA.JK', 'BMRI.JK', 'BBRI.JK', 'BBNI.JK', 'TLKM.JK', 'AMMN.JK', 'BREN.JK', 'ASII.JK', 'BRPT.JK', 'CUAN.JK']
     total_tickers = len(all_tickers)
     
     conn = get_db_connection()

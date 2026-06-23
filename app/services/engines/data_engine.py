@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+from app.core.key_router import APIKeyRouter
 from typing import Dict
 import requests
 import json
@@ -83,11 +84,18 @@ def _apply_goapi_bulk_prices(data_dict, goapi_key):
     chunk_size = 50
     print(f"[Bulk API] Menarik harga Real-Time untuk {len(tickers)} saham dari GoAPI...")
     
+    router = APIKeyRouter("GoAPI")
+    db_key, _ = router.get_key()
+    final_key = goapi_key or db_key
+    
+    if not final_key:
+        print("[Bulk API] Peringatan: Tidak ada GoAPI Key ditemukan di Database. Sensus hanya menggunakan data Yahoo Finance (Delay).")
+    
     for i in range(0, len(tickers), chunk_size):
         chunk = tickers[i:i + chunk_size]
         symbols = ",".join([t.replace(".JK", "") for t in chunk])
         url = f"https://api.goapi.io/stock/idx/prices?symbols={symbols}"
-        headers = {"X-API-KEY": goapi_key, "Accept": "application/json"} if goapi_key else {"Accept": "application/json"}
+        headers = {"X-API-KEY": final_key, "Accept": "application/json"} if final_key else {"Accept": "application/json"}
         
         try:
             res = reliable_get(url, headers=headers, timeout=10)

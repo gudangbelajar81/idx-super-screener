@@ -172,11 +172,19 @@ def calculate_master_score(df: pd.DataFrame) -> dict:
         sl2_raw = round(sr_zones['strongest_support']['center'], 0)
         sl2_uji = sr_zones['strongest_support']['count']
     else:
-        sl2_raw = round(last_close * 0.92, 0)
+        sl2_raw = round(last_close * 0.90, 0)
         sl2_uji = 1
         
-    max_loss_price = round(last_close * 0.92, 0)
-    sl2_price = max_loss_price if sl2_raw < max_loss_price else sl2_raw
+    # Capping risiko (Anti-Kiamat)
+    max_sl1_price = round(last_close * 0.94, 0) # Maksimal -6% untuk SL1
+    max_sl2_price = round(last_close * 0.90, 0) # Maksimal -10% untuk SL2
+    
+    sl = max_sl1_price if sl < max_sl1_price else sl
+    sl2_price = max_sl2_price if sl2_raw < max_sl2_price else sl2_raw
+    
+    # Pastikan SL2 tidak lebih tinggi dari SL1 (Logika terbalik yang bikin bingung)
+    if sl2_price > sl:
+        sl2_price = sl
         
     rr = round((tp - last_close) / (last_close - sl), 2) if last_close > sl else 0.0
     

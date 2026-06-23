@@ -177,12 +177,16 @@ def analyze_swing_fortress(df: pd.DataFrame) -> dict:
             sl2_raw = round(last_close * 0.95, 0)
             sl2_uji = 1
             
-        # Batasan maksimal SL 2 (Max Cap -8%)
-        max_loss_price = round(last_close * 0.92, 0)
-        if sl2_raw < max_loss_price:
-            sl2_price = max_loss_price
-        else:
-            sl2_price = sl2_raw
+        # Batasan maksimal Risiko (Capping)
+        max_sl1_price = round(last_close * 0.95, 0) # Max SL1: -5%
+        max_sl2_price = round(last_close * 0.92, 0) # Max SL2: -8%
+        
+        sl_price = max_sl1_price if sl_price < max_sl1_price else sl_price
+        sl2_price = max_sl2_price if sl2_raw < max_sl2_price else sl2_raw
+        
+        # SL2 harus selalu lebih dalam/rendah atau sama dengan SL1
+        if sl2_price > sl_price:
+            sl2_price = sl_price
             
         if tp_price and sl_price and (last_close - sl_price) > 0:
             risk = last_close - sl_price
@@ -437,6 +441,8 @@ def analyze_ninja_scalper(df: pd.DataFrame) -> dict:
         "close": last_close,
         "tp": tp_price,
         "sl": sl_price,
+        "sl2": sl2_price if 'sl2_price' in locals() else sl_price,
+        "sl2_uji": sl2_uji if 'sl2_uji' in locals() else 1,
         "smart_money_score": round(smart_money_score, 3),
         "bandar_verdict": verdict_bandar,
         "win_probability": round(win_probability, 1),

@@ -997,7 +997,7 @@ function App() {
                           <button className="btn-ai" onClick={(e) => { e.stopPropagation(); fetchAIXray(stock.ticker); }} style={{ flex: 1, padding: '8px', background: 'linear-gradient(135deg, #9b59b6, #8e44ad)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                               🧠 AI X-Ray
                             </button>
-                            <button className="btn-chart" onClick={(e) => { e.stopPropagation(); setSelectedChart({ticker: stock.ticker, tp: stock.target_profit, sl: stock.stop_loss}); }}>
+                            <button className="btn-chart" onClick={(e) => { e.stopPropagation(); setSelectedChart({ticker: stock.ticker, tp: stock.target_profit, sl: stock.stop_loss}); }} style={{ flex: 1 }}>
                             📈 Buka Grafik
                           </button>
                         </div>

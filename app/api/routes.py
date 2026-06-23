@@ -506,7 +506,7 @@ def get_chart_data(ticker: str, is_global: bool = False):
 @router.get("/api/xray/{ticker}")
 def xray_ticker(ticker: str):
     """Melakukan deep scan pada satu saham"""
-    from xray_engine import run_xray_scan
+    from app.services.engines.xray_engine import run_xray_scan
     try:
         res = run_xray_scan(ticker)
         return {"data": res}
@@ -670,6 +670,8 @@ def scan_all_ninja(premium: bool = True):
         item["signal"] = analysis.get("signal", False)
         item["tp"] = analysis.get("tp")
         item["sl"] = analysis.get("sl")
+        item["sl2"] = analysis.get("sl2")
+        item["sl2_uji"] = analysis.get("sl2_uji")
         
         if item["signal"]:
             # MTC (Multi-Timeframe Confluence)

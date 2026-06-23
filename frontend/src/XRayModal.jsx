@@ -10,6 +10,7 @@ const XRayModal = ({ data, onClose }) => {
 
   const getStatusColor = (signal) => signal ? 'var(--color-green)' : 'var(--color-pink)';
   const getSentimentColor = (sentiment) => {
+    if (!sentiment) return '#aaa';
     if (sentiment.includes('POSITIF')) return 'var(--color-green)';
     if (sentiment.includes('NEGATIF')) return 'var(--color-pink)';
     return '#aaa';
@@ -61,8 +62,8 @@ const XRayModal = ({ data, onClose }) => {
                   <p style={{ margin: 0, color: '#aaa', fontSize: '13px' }}>Top Seller: <strong style={{ color: 'var(--color-pink)' }}>{data.broker.top_seller}</strong></p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: '0 0 4px 0', color: '#aaa', fontSize: '13px' }}>Net Vol: <strong>{data.broker.net_volume.toLocaleString('id-ID')} Lot</strong></p>
-                  <p style={{ margin: 0, color: '#aaa', fontSize: '13px' }}>Avg Price: <strong>Rp {data.broker.avg_price.toLocaleString('id-ID')}</strong></p>
+                  <p style={{ margin: '0 0 4px 0', color: '#aaa', fontSize: '13px' }}>Net Vol: <strong>{data.broker.net_volume?.toLocaleString('id-ID') || 0} Lot</strong></p>
+                  <p style={{ margin: 0, color: '#aaa', fontSize: '13px' }}>Avg Price: <strong>Rp {data.broker.avg_price?.toLocaleString('id-ID') || 0}</strong></p>
                 </div>
               </div>
               

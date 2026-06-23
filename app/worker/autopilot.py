@@ -4,7 +4,7 @@ from app.core.database import get_db_connection
 from app.services.engines.sensus_engine import run_sensus_pilihan, run_sensus_kavaleri
 from app.services.engines.technical_engine import analyze_swing_fortress, analyze_cavalry_fast_swing
 from app.services.engines.data_engine import download_daily_data
-from app.services.engines.notif_engine import send_telegram_message
+from app.services.engines.notif_engine import send_telegram_message, notify_signal
 
 def process_position(args):
     ticker, df = args
@@ -77,7 +77,7 @@ def run_eod_autopilot():
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM idx_signals WHERE mode IN ('position', 'swing')")
             
-            pos_count = 0
+pos_count = 0
             for res in position_results:
                 if res.get('signal'):
                     cursor.execute("""
@@ -88,6 +88,10 @@ def run_eod_autopilot():
                         res['status'], res['reason'], res['tp'], res['sl']
                     ))
                     pos_count += 1
+                    try:
+                        notify_signal(res, mode='position')
+                    except Exception as e:
+                        print(f"Gagal kirim notif telegram (Position): {e}")
             
             swing_count = 0
             for res in swing_results:
@@ -100,6 +104,10 @@ def run_eod_autopilot():
                         res['status'], res['reason'], res['tp'], res['sl']
                     ))
                     swing_count += 1
+                    try:
+                        notify_signal(res, mode='swing')
+                    except Exception as e:
+                        print(f"Gagal kirim notif telegram (Swing): {e}")
             
             conn.commit()
             print(f"✅ [AUTOPILOT] Berhasil menyimpan {pos_count} Sinyal Position dan {swing_count} Sinyal Swing ke Database!")

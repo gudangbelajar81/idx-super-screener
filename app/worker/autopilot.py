@@ -78,7 +78,7 @@ def run_eod_autopilot():
                 
                 if results:
                     sql = """
-                        INSERT INTO idx_master (
+                        REPLACE INTO idx_master (
                             ticker, sector, close_price, avg_value, avg_volatility,
                             relative_strength_score, smart_money_score, institutional_score, catalyst_score,
                             composite_score, intraday_score, swing_score,

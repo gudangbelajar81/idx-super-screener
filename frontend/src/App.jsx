@@ -864,14 +864,11 @@ function App() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>
-                  <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px' }}>
-                    Mode Position
+                  <button className="btn-scan" onClick={() => setActiveTab('intraday')} style={{ flex: 1, background: activeTab === 'intraday' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'intraday' ? 'black' : 'white', borderRadius: '8px', fontWeight: 'bold' }}>
+                    ⚡ Intraday Momentum
                   </button>
-                  <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'none' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'none' ? 'black' : 'white', borderRadius: '8px' }}>
-                    Mode Swing
-                  </button>
-                  <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'intraday' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'intraday' ? 'black' : 'white', borderRadius: '8px' }}>
-                    Mode Scalping
+                  <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ flex: 1, background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px', fontWeight: 'bold' }}>
+                    📈 Swing Trading
                   </button>
                 </div>
               </>

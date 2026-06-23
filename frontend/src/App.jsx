@@ -10,7 +10,7 @@ import './index.css';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState('swing');
   const [compositeData, setCompositeData] = useState([]);
   const [compositeLoading, setCompositeLoading] = useState(false);
   const [swingData, setSwingData] = useState([]);
@@ -192,7 +192,7 @@ function App() {
         const res = await axios.get(`${API_BASE}/api/scan/all-swing?premium=${isPremium}`);
         if (res.data.message) alert(res.data.message);
         setSwingData(res.data.data || []);
-      } else if (activeTab === 'kavaleri') {
+      } else if (activeTab === 'none') {
         const res = await axios.get(`${API_BASE}/api/scan/kavaleri?premium=${isPremium}`);
         if (res.data.message) alert(res.data.message);
         setKavaleriData(res.data.data || []);
@@ -370,9 +370,9 @@ function App() {
       fetchPortfolio();
     } else if (activeTab === 'swing' && swingData.length === 0) {
       fetchCandidates('swing');
-    } else if (activeTab === 'ninja' && ninjaData.length === 0) {
+    } else if (activeTab === 'intraday' && ninjaData.length === 0) {
       fetchCandidates('ninja');
-    } else if (activeTab === 'kavaleri' && kavaleriData.length === 0) {
+    } else if (activeTab === 'none' && kavaleriData.length === 0) {
       fetchCandidates('kavaleri');
     }
     // Fetch IPO news only once when first loading
@@ -415,11 +415,11 @@ function App() {
     startEngineTracking('vip');
     const runScan = async () => {
       try {
-        if (activeTab === 'swing') await fetchSwing(true);
-        else if (activeTab === 'ninja') await fetchNinja(true);
-        else if (activeTab === 'kavaleri') await fetchKavaleri(true);
-        else if (activeTab === 'whale') await fetchWhale();
-        else if (activeTab === 'global') await fetchGlobal();
+        if (activeTab === 'swing') await fetchMasterSwing();
+        else if (activeTab === 'intraday') await fetchMasterIntraday();
+        else if (activeTab === 'none') await fetchKavaleri(true);
+        else if (activeTab === 'none') await fetchWhale();
+        else if (activeTab === 'none') await fetchGlobal();
         stopEngineTracking(true, 'Pemindaian VIP berhasil. Lihat hasil di bawah.');
       } catch (err) {
         stopEngineTracking(false, 'Pemindaian gagal — coba lagi atau gunakan Free Mode.');
@@ -444,16 +444,16 @@ function App() {
   // Live Radar Effect (Auto Scan every 3 mins for Scalping)
   useEffect(() => {
     let radarTimer;
-    if (liveRadar && activeTab === 'ninja') {
+    if (liveRadar && activeTab === 'intraday') {
       radarTimer = setInterval(() => {
         console.log('Live Radar: Auto-scanning Scalping VIP...');
-        fetchNinja(true);
+        fetchMasterIntraday();
       }, 180000);
     }
     return () => clearInterval(radarTimer);
   }, [liveRadar, activeTab]);
 
-  const currentData = activeTab === 'swing' ? swingData : activeTab === 'ninja' ? ninjaData : activeTab === 'kavaleri' ? kavaleriData : whaleData;
+  const currentData = activeTab === 'swing' ? swingData : activeTab === 'intraday' ? ninjaData : activeTab === 'none' ? kavaleriData : whaleData;
 
   const totalScanned = currentData.length;
   const totalSignals = currentData.filter(d => d.signal).length;
@@ -539,27 +539,11 @@ function App() {
         </div>
         <nav className="sidebar-nav">
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <li className={`sidebar-item elite-home ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
-              <LayoutDashboard size={18} color="#00ffcc" />
-              <span style={{color: '#00ffcc', fontWeight: 'bold', textShadow: '0 0 5px rgba(0, 255, 204, 0.5)'}}>Command Center</span>
-            </li>
-            <li className={`sidebar-item ${['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'active' : ''}`} onClick={() => setActiveTab('swing')}>
-              <TrendingUp size={18} />
-              Screener IDX
-            </li>
-            <li className={`sidebar-item ${activeTab === 'news' ? 'active' : ''}`} onClick={() => setActiveTab('news')}>
-              <Activity size={18} />
-              Berita dan IPO
-            </li>
+            
+            
 
-          <li className={`sidebar-item premium-glow ${activeTab === 'global' ? 'active' : ''}`} onClick={() => setActiveTab('global')}>
-            <Globe size={18} color="#f1c40f" />
-            <span style={{color: '#f1c40f', fontWeight: 'bold'}}>Global Astro</span>
-          </li>
-          <li className={`sidebar-item ${activeTab === 'portfolio' ? 'active' : ''}`} onClick={() => setActiveTab('portfolio')}>
-            <BarChart2 size={18} />
-            Portofolio Robot
-          </li>
+          
+          
           <li className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`} style={{ marginTop: 'auto' }} onClick={() => setActiveTab('settings')}>
             <Settings size={18} />
             Pengaturan
@@ -600,7 +584,7 @@ function App() {
         )}
         <header className="header">
           <h1>
-            {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Scanner IDX' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'whale' ? 'Radar Paus (Whale Tracker)' : activeTab === 'global' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
+            {activeTab === 'home' ? 'Ultimate Command Center' : ['swing', 'kavaleri', 'ninja'].includes(activeTab) ? 'Master Trading AI' : activeTab === 'news' ? 'Berita & IPO' : activeTab === 'none' ? 'Radar Paus (Whale Tracker)' : activeTab === 'none' ? 'Global Markets' : activeTab === 'portfolio' ? 'Portofolio Robot' : 'Pengaturan Watchlist'}
           </h1>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
 
@@ -881,10 +865,10 @@ function App() {
                   <button className="btn-scan" onClick={() => setActiveTab('swing')} style={{ background: activeTab === 'swing' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'swing' ? 'black' : 'white', borderRadius: '8px' }}>
                     Mode Position
                   </button>
-                  <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'kavaleri' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'kavaleri' ? 'black' : 'white', borderRadius: '8px' }}>
+                  <button className="btn-scan" onClick={() => setActiveTab('kavaleri')} style={{ background: activeTab === 'none' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'none' ? 'black' : 'white', borderRadius: '8px' }}>
                     Mode Swing
                   </button>
-                  <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'ninja' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'ninja' ? 'black' : 'white', borderRadius: '8px' }}>
+                  <button className="btn-scan" onClick={() => setActiveTab('ninja')} style={{ background: activeTab === 'intraday' ? 'var(--color-green)' : 'rgba(255,255,255,0.1)', color: activeTab === 'intraday' ? 'black' : 'white', borderRadius: '8px' }}>
                     Mode Scalping
                   </button>
                 </div>
@@ -903,7 +887,7 @@ function App() {
                   )}
                 </div>
                 <div style={{display:'flex', gap:'10px', alignItems: 'center'}}>
-                  {activeTab === 'ninja' && (
+                  {activeTab === 'intraday' && (
                     <label style={{
                       display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                       background: liveRadar ? 'rgba(255, 71, 87, 0.2)' : 'rgba(255, 255, 255, 0.1)',
@@ -953,7 +937,7 @@ function App() {
                       </div>
                       <div className="reason">{stock.reason}</div>
                       
-                      {activeTab === 'whale' && (
+                      {activeTab === 'none' && (
                         <div className="tp-sl-container" style={{ marginTop: '10px' }}>
                           <div className="tp-sl-row">
                             <div className="tp-block">
@@ -998,7 +982,7 @@ function App() {
                         </div>
                       )}
 
-                      {activeTab === 'kavaleri' && (
+                      {activeTab === 'none' && (
                         <div style={{marginTop: '10px', display: 'flex', gap: '5px'}}>
                           {stock.squeeze_fired && (
                             <span style={{background: '#ffa502', color: '#000', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold'}}>💣 SQUEEZE FIRED</span>
@@ -1039,7 +1023,7 @@ function App() {
         )}
 
         {/* --- TAB GLOBAL --- */}
-        {activeTab === 'global' && (
+        {activeTab === 'none' && (
           <div className="tab-content">
             <div className="card full-width">
               <div className="card-header">

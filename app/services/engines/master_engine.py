@@ -1,0 +1,164 @@
+import pandas as pd
+import ta
+import numpy as np
+import random
+
+def calc_vwap(df: pd.DataFrame) -> pd.Series:
+    typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+    cumulative_tp_vol = (typical_price * df['Volume']).cumsum()
+    cumulative_vol = df['Volume'].cumsum()
+    return cumulative_tp_vol / cumulative_vol
+
+def calc_chaikin_money_flow(df: pd.DataFrame, period: int = 20) -> float:
+    high = df['High']
+    low = df['Low']
+    close = df['Close']
+    volume = df['Volume']
+    mfm = ((close - low) - (high - close)) / (high - low + 1e-9)
+    mfv = mfm * volume
+    cmf = mfv.rolling(window=period).sum() / volume.rolling(window=period).sum()
+    return float(cmf.iloc[-1]) if not pd.isna(cmf.iloc[-1]) else 0.0
+
+def calculate_master_score(df: pd.DataFrame) -> dict:
+    if len(df) < 50:
+        return {"error": "Data kurang dari 50 candle"}
+        
+    df = df.copy()
+    last_close = float(df['Close'].iloc[-1])
+    last_vol = float(df['Volume'].iloc[-1])
+    
+    # 1. Indikator Dasar
+    df['EMA5'] = ta.trend.ema_indicator(df['Close'], window=5)
+    df['EMA9'] = ta.trend.ema_indicator(df['Close'], window=9)
+    df['EMA20'] = ta.trend.ema_indicator(df['Close'], window=20)
+    df['EMA50'] = ta.trend.ema_indicator(df['Close'], window=50)
+    df['EMA200'] = ta.trend.ema_indicator(df['Close'], window=200)
+    df['VWAP'] = calc_vwap(df)
+    
+    vol_sma20 = df['Volume'].rolling(window=20).mean().iloc[-1]
+    rvol = last_vol / vol_sma20 if vol_sma20 > 0 else 0
+    vol_expansion_pct = (rvol - 1) * 100
+    
+    cmf_20 = calc_chaikin_money_flow(df, period=20)
+    
+    highest_20 = df['High'].tail(20).max()
+    lowest_20 = df['Low'].tail(20).min()
+    
+    curr = df.iloc[-1]
+    
+    # 2. Perhitungan Komponen Skor (0-100)
+    
+    # A. Relative Strength Score (20%)
+    # Dihitung dari jarak harga terhadap EMA50 dan posisi di antara High-Low 20 hari
+    rs_raw = (last_close - curr['EMA50']) / curr['EMA50'] * 100 if not pd.isna(curr['EMA50']) else 0
+    rs_score = min(max(int((rs_raw + 10) * 5), 0), 100)
+    
+    # B. Smart Money & Institutional Score (20% + 10% = 30%)
+    # Dihitung dari Chaikin Money Flow dan Volume Expansion
+    sm_raw = cmf_20 * 100 # CMF range -1 to 1
+    sm_score = min(max(int(sm_raw + 50), 0), 100)
+    inst_score = min(max(int(rvol * 20), 0), 100)
+    
+    # C. Trend & Market Regime Score (15% + 15% = 30%)
+    # Dihitung dari alignment EMA
+    trend_score = 0
+    if curr['EMA5'] > curr['EMA20']: trend_score += 30
+    if curr['EMA20'] > curr['EMA50']: trend_score += 30
+    if not pd.isna(curr['EMA200']) and curr['EMA50'] > curr['EMA200']: trend_score += 40
+    
+    # D. Catalyst Score (Proxy/Simulasi 10%)
+    # Disimulasikan berdasarkan volatilitas dan spike (berita biasanya memicu spike)
+    catalyst_score = min(max(int(vol_expansion_pct / 3), 0), 100)
+    
+    # E. Risk & Historical Edge (10%)
+    # Jarak ke titik terendah 20 hari (makin dekat support makin kecil risiko)
+    risk_dist = (last_close - lowest_20) / lowest_20 * 100 if lowest_20 > 0 else 100
+    risk_score = 100 - min(max(int(risk_dist * 5), 0), 100)
+    
+    # 3. COMPOSITE SCORE (0-100)
+    composite_score = int(
+        (rs_score * 0.20) + 
+        (sm_score * 0.20) + 
+        (inst_score * 0.10) + 
+        (trend_score * 0.30) + 
+        (catalyst_score * 0.10) + 
+        (risk_score * 0.10)
+    )
+    
+    # 4. INTRADAY MOMENTUM LAYER (Filter Ketat)
+    is_intraday_eligible = (
+        rvol > 2.0 and 
+        vol_expansion_pct > 200 and 
+        last_close > curr['VWAP'] and 
+        curr['EMA5'] > curr['EMA9'] and 
+        curr['EMA9'] > curr['EMA20'] and 
+        cmf_20 > 0
+    )
+    
+    intraday_score = composite_score + 10 if is_intraday_eligible else 0
+    intraday_score = min(intraday_score, 100)
+    
+    # 5. SWING TRADING LAYER (Filter Ketat)
+    is_swing_eligible = (
+        not pd.isna(curr['EMA200']) and
+        curr['EMA50'] > curr['EMA200'] and 
+        cmf_20 > 0.05 and
+        trend_score >= 60
+    )
+    
+    swing_score = composite_score + 5 if is_swing_eligible else 0
+    swing_score = min(swing_score, 100)
+    
+    # 6. Status & Attributes
+    smart_money_status = "Akumulasi Masif" if sm_score > 70 else "Distribusi" if sm_score < 30 else "Netral"
+    trend_status = "Strong Bullish" if trend_score == 100 else "Bullish" if trend_score >= 60 else "Sideways/Bearish"
+    setup_type = "ORB Breakout" if is_intraday_eligible else "VCP/Pullback" if is_swing_eligible else "Tidak Ada"
+    
+    recommendation = "AVOID"
+    if composite_score >= 80 and (is_intraday_eligible or is_swing_eligible):
+        recommendation = "STRONG BUY"
+    elif composite_score >= 65 and (is_intraday_eligible or is_swing_eligible):
+        recommendation = "BUY"
+    elif composite_score >= 50:
+        recommendation = "WATCHLIST"
+        
+    intraday_rec = "BUY" if is_intraday_eligible else "AVOID"
+    swing_rec = "BUY" if is_swing_eligible else "AVOID"
+    if recommendation == "STRONG BUY" and is_intraday_eligible: intraday_rec = "STRONG BUY"
+    if recommendation == "STRONG BUY" and is_swing_eligible: swing_rec = "STRONG BUY"
+        
+    # Projections
+    tp = round(highest_20 * 1.05, 0) if highest_20 > 0 else round(last_close * 1.05, 0)
+    sl = round(lowest_20 * 0.98, 0) if lowest_20 > 0 else round(last_close * 0.95, 0)
+    rr = round((tp - last_close) / (last_close - sl), 2) if last_close > sl else 0.0
+
+    return {
+        "error": None,
+        "close_price": last_close,
+        "avg_value": last_vol * last_close, # proxy
+        "avg_volatility": (df['High'].iloc[-20:].mean() - df['Low'].iloc[-20:].mean()) / df['Low'].iloc[-20:].mean(),
+        
+        "relative_strength_score": rs_score,
+        "smart_money_score": sm_score,
+        "institutional_score": inst_score,
+        "catalyst_score": catalyst_score,
+        
+        "composite_score": composite_score,
+        "intraday_score": intraday_score,
+        "swing_score": swing_score,
+        
+        "smart_money_status": smart_money_status,
+        "institutional_status": "Foreign Inflow" if inst_score > 60 else "Netral",
+        "catalyst_status": "Berita Positif" if catalyst_score > 60 else "Sepi",
+        "trend_status": trend_status,
+        "setup_type": setup_type,
+        
+        "recommendation": recommendation,
+        "intraday_recommendation": intraday_rec,
+        "swing_recommendation": swing_rec,
+        
+        "expected_return": round((tp - last_close) / last_close * 100, 2),
+        "target_profit": tp,
+        "stop_loss": sl,
+        "risk_reward_ratio": rr
+    }

@@ -518,10 +518,12 @@ def get_portfolio():
 @router.post("/api/universe/build")
 def build_idx_universe(background_tasks: BackgroundTasks, x_goapi_key: str = Header(None)):
     """Endpoint untuk memulai sensus seluruh saham IDX di belakang layar"""
-    from app.services.engines.universe_engine import set_status, build_universe
+    from app.services.engines.universe_engine import set_status
+    from app.worker.autopilot import run_eod_autopilot
+    
     # Reset status sebelum mulai
-    set_status("starting", 0, "Mempersiapkan Sensus...")
-    background_tasks.add_task(build_universe, x_goapi_key)
+    set_status("starting", 0, "Mempersiapkan Master AI...")
+    background_tasks.add_task(run_eod_autopilot)
     return {"message": "Sensus Master dimulai di belakang layar.", "status": "processing"}
 
 @router.get("/api/universe/status")
@@ -828,3 +830,29 @@ def trigger_autopilot(api_key: str = Depends(verify_api_key)):
         return {"message": "Autopilot Triggered successfully!"}
     except Exception as e:
         return {"message": f"Error triggering autopilot: {e}"}
+
+@router.get("/api/master/intraday")
+def get_master_intraday():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM idx_master WHERE intraday_score > 0 ORDER BY intraday_score DESC, composite_score DESC")
+            rows = cursor.fetchall()
+            return {"data": rows, "message": "Berhasil mengambil data Intraday Momentum"}
+    except Exception as e:
+        return {"data": [], "message": str(e)}
+    finally:
+        conn.close()
+
+@router.get("/api/master/swing")
+def get_master_swing():
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM idx_master WHERE swing_score > 0 ORDER BY swing_score DESC, composite_score DESC")
+            rows = cursor.fetchall()
+            return {"data": rows, "message": "Berhasil mengambil data Swing Trading"}
+    except Exception as e:
+        return {"data": [], "message": str(e)}
+    finally:
+        conn.close()

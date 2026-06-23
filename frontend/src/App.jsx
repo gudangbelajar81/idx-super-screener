@@ -1158,7 +1158,7 @@ function App() {
         )}
 
         {activeTab === 'institutional' && (
-          <InstitutionalRadar apiKey={apiKey} />
+          <InstitutionalRadar apiKey={serverKey} />
         )}
         
         {activeTab === 'news' && (

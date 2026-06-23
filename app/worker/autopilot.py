@@ -60,14 +60,14 @@ def run_eod_autopilot():
                             INSERT INTO idx_signals (ticker, mode, price, volatility, signal_text, status, reason, tp, sl)
                             VALUES (%s, 'position', %s, %s, %s, %s, %s, %s, %s)
                         """, (
-                            ticker.replace(".JK", ""), last_close, 0, analysis_pos['signal'],
-                            analysis_pos['status'], analysis_pos['reason'], analysis_pos['tp'], analysis_pos['sl']
+                            ticker.replace(".JK", ""), last_close, 0, analysis_pos.get('signal_text', 'BUY'),
+                            analysis_pos.get('status', 'Layak Koleksi'), analysis_pos.get('reason', 'Tren kuat & akumulasi'), analysis_pos.get('tp'), analysis_pos.get('sl')
                         ))
                         pos_count += 1
                         res_dict = {
                             "ticker": ticker.replace(".JK", ""), "price": last_close, "signal": True,
-                            "status": analysis_pos['status'], "reason": analysis_pos['reason'],
-                            "tp": analysis_pos['tp'], "sl": analysis_pos['sl']
+                            "status": analysis_pos.get('status', 'Layak Koleksi'), "reason": analysis_pos.get('reason', 'Tren kuat & akumulasi'),
+                            "tp": analysis_pos.get('tp'), "sl": analysis_pos.get('sl'), "sentiment": analysis_pos.get('sentiment', 'NETRAL')
                         }
                         try:
                             notify_signal(res_dict, mode='position')
@@ -82,14 +82,14 @@ def run_eod_autopilot():
                                 INSERT INTO idx_signals (ticker, mode, price, volatility, signal_text, status, reason, tp, sl)
                                 VALUES (%s, 'swing', %s, %s, %s, %s, %s, %s, %s)
                             """, (
-                                ticker.replace(".JK", ""), last_close, 0, analysis_swing['signal'],
-                                analysis_swing['status'], analysis_swing['reason'], analysis_swing['tp'], analysis_swing['sl']
+                                ticker.replace(".JK", ""), last_close, 0, analysis_swing.get('signal_text', 'BUY'),
+                                analysis_swing.get('status', 'Momentum Positif'), analysis_swing.get('reason', 'Potensi breakout / rebound'), analysis_swing.get('tp'), analysis_swing.get('sl')
                             ))
                             swing_count += 1
                             res_dict = {
                                 "ticker": ticker.replace(".JK", ""), "price": last_close, "signal": True,
-                                "status": analysis_swing['status'], "reason": analysis_swing['reason'],
-                                "tp": analysis_swing['tp'], "sl": analysis_swing['sl']
+                                "status": analysis_swing.get('status', 'Momentum Positif'), "reason": analysis_swing.get('reason', 'Potensi breakout / rebound'),
+                                "tp": analysis_swing.get('tp'), "sl": analysis_swing.get('sl'), "sentiment": analysis_swing.get('sentiment', 'NETRAL')
                             }
                             try:
                                 notify_signal(res_dict, mode='swing')

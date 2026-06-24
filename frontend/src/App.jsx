@@ -1239,17 +1239,6 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-            {sortedData.length === 0 && !loading && (
-              <tr>
-                <td colSpan="7" style={{ padding: '40px', textAlign: 'center', background: 'rgba(255, 0, 0, 0.05)' }}>
-                  <h3 style={{ color: '#ff4757', marginBottom: '10px' }}>⚠️ Data Tidak Tersedia</h3>
-                  <p style={{ color: 'rgba(255,255,255,0.7)' }}>
-                    Tidak ada kandidat saham saat ini. Sistem <b>TIDAK</b> menggunakan data buatan (dummy).<br/>
-                    Jika tabel ini kosong, jalankan <b>Sensus Master</b> terlebih dahulu, atau tekan tombol <b>Pemindaian VIP</b>.
-                  </p>
-                </td>
-              </tr>
-            )}
                   {portfolioData.map((trade) => (
                     <tr key={trade.id}>
                       <td>{new Date(trade.created_at).toLocaleString('id-ID')}</td>
